@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級經營助手 V.10.0</title>
+    <title>班級經營助手 V.13.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -30,14 +30,13 @@
             background-color: #FFF; margin: 0 auto; display: inline-block;
         }
         
-        /* 側邊欄容器 */
         .student-sidebar {
             background: #E1F5FE; border: 2px solid #81D4FA; border-radius: 15px; padding: 10px;
             height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative;
         }
         .student-list-content { flex: 1; overflow-y: auto; margin-top: 10px; }
         
-        /* 安全鎖遮罩 */
+        /* 遮罩 */
         .sidebar-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); z-index: 10;
@@ -54,43 +53,57 @@
         }
         .student-tag:hover { background: #81D4FA; color: white; transform: translateX(5px); }
         .student-tag:active { transform: scale(0.95); }
-        
         .student-tag.used { background-color: #ECEFF1; color: #90A4AE; border-color: #CFD8DC; }
         .student-tag.used:hover { background-color: #B0BEC5; color: white; }
-
         .student-draggable { cursor: grab; }
         
         .footer { margin-top: auto; text-align: center; color: #8D6E63; padding-top: 20px; border-top: 2px dashed #FFCC80; }
         .footer a { background-color: #FF7043; color: white; padding: 5px 15px; border-radius: 20px; text-decoration: none; }
         
         .manual-input-group { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
-        
         .table-custom th { background-color: #FFE082; color: #5D4037; text-align: center; }
         .tab-pane { height: 100%; overflow-y: auto; }
         
         input.target-input:focus { border: 2px solid #FFAB40; background-color: #FFF8E1; box-shadow: 0 0 8px rgba(255, 171, 64, 0.5); }
         input.active-target { border: 2px solid #FF5722 !important; background-color: #FFCCBC !important; }
-
         .undo-bar { margin-bottom: 10px; text-align: right; }
+
+        /* 顏色選擇器 */
+        .color-palette { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; justify-content: center; }
+        .color-btn { width: 30px; height: 30px; border-radius: 5px; border: 1px solid #999; cursor: pointer; transition: transform 0.2s; }
+        .color-btn:hover { transform: scale(1.2); z-index: 10; border-color: #000; }
+
+        /* 滑動條區塊 */
+        .slider-control { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; }
+        .slider-label { font-size: 0.8rem; font-weight: bold; color: #666; display: flex; justify-content: space-between; }
+        
+        /* 方向鍵 */
+        .d-pad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; width: 100px; margin: 0 auto; }
+        .d-pad button { padding: 2px 0; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid main-container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.10.0</small></h3>
-        <div>
-            <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="importStudentExcel(this)">
-            <button class="btn btn-sm btn-purple" onclick="downloadExampleExcel()">📥 下載範例</button>
-            <button class="btn btn-sm btn-purple" onclick="document.getElementById('excelInput').click()">📤 匯入名單</button>
+        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.13.0</small></h3>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-dark" onclick="downloadConfig()">💾 下載設定</button>
+            <button class="btn btn-sm btn-warning" onclick="document.getElementById('configInput').click()">📂 讀取設定</button>
+            <input type="file" id="configInput" accept=".json" style="display: none;" onchange="loadConfig(this)">
             <div class="vr mx-2"></div>
-            <button class="btn btn-sm btn-outline-primary" onclick="exportToWord()">📝 存成 Word</button>
-            <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">📊 存成 Excel</button>
+            <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="importStudentExcel(this)">
+            <button class="btn btn-sm btn-purple" onclick="downloadExampleExcel()">📥 範例</button>
+            <button class="btn btn-sm btn-purple" onclick="document.getElementById('excelInput').click()">📤 匯入</button>
+            <div class="vr mx-2"></div>
+            <button class="btn btn-sm btn-outline-primary" onclick="exportToWord()">📝 Word</button>
+            <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">📊 Excel</button>
         </div>
     </div>
 
     <ul class="nav nav-tabs" id="myTab" role="tablist">
         <li class="nav-item"><button class="nav-link active" id="seats-tab" data-bs-toggle="tab" data-bs-target="#seats-panel" type="button" onclick="switchTab('seats')">1. 🪑 排座位</button></li>
+        <li class="nav-item"><button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-panel" type="button" onclick="switchTab('groups')">4. 👥 分組座位</button></li>
         <li class="nav-item"><button class="nav-link" id="cadres-tab" data-bs-toggle="tab" data-bs-target="#cadres-panel" type="button" onclick="switchTab('cadres')">2. 🎖️ 排幹部</button></li>
         <li class="nav-item"><button class="nav-link" id="cleaning-tab" data-bs-toggle="tab" data-bs-target="#cleaning-panel" type="button" onclick="switchTab('cleaning')">3. 🧹 安排掃區</button></li>
     </ul>
@@ -101,42 +114,123 @@
             <div class="undo-bar"><button class="btn btn-sm btn-outline-secondary" onclick="undo('seats')">↩️ 上一步</button></div>
             <div class="row h-100">
                 <div class="col-md-2">
-                    <div class="p-3 bg-light rounded border">
-                        <h6 class="fw-bold">📐 教室配置</h6>
+                    <div class="p-3 bg-light rounded border h-100 overflow-auto">
+                        <h6 class="fw-bold">📐 配置</h6>
                         <div class="row g-1 mb-2">
-                            <div class="col-6"><label>直排</label><input type="number" id="inputRows" class="form-control form-control-sm" value="5"></div>
-                            <div class="col-6"><label>橫列</label><input type="number" id="inputCols" class="form-control form-control-sm" value="6"></div>
+                            <div class="col-6"><label>直排</label><input type="number" id="inputRowsMain" class="form-control form-control-sm" value="5"></div>
+                            <div class="col-6"><label>橫列</label><input type="number" id="inputColsMain" class="form-control form-control-sm" value="6"></div>
                         </div>
-                        <button class="btn btn-primary btn-sm w-100" onclick="initGridSystem()">✨ 生成座位</button>
+                        <button class="btn btn-primary btn-sm w-100 mb-2" onclick="initGridSystem('main')">✨ 生成座位</button>
+                        
+                        <div class="slider-control">
+                            <div class="slider-label"><span>大小</span><span id="sizeValMain">90</span></div>
+                            <input type="range" class="form-range" min="50" max="150" value="90" oninput="updateGridSettings('main', 'size', this.value)">
+                            <div class="slider-label"><span>↔️ 間距</span><span id="gapXValMain">110</span></div>
+                            <input type="range" class="form-range" min="60" max="200" value="110" oninput="updateGridSettings('main', 'gapX', this.value)">
+                            <div class="slider-label"><span>↕️ 間距</span><span id="gapYValMain">80</span></div>
+                            <input type="range" class="form-range" min="40" max="200" value="80" oninput="updateGridSettings('main', 'gapY', this.value)">
+                        </div>
+
+                        <div class="mb-2 text-center">
+                            <small class="text-muted">全體移動</small>
+                            <div class="d-pad">
+                                <div></div><button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('main', 0, -20)">⬆️</button><div></div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('main', -20, 0)">⬅️</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('main', 0, 20)">⬇️</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('main', 20, 0)">➡️</button>
+                            </div>
+                        </div>
+
                         <hr>
                         <h6 class="fw-bold">🛠️ 工具</h6>
-                        <button class="btn btn-secondary btn-sm w-100" onclick="addTeacherDesk()">👩‍🏫 講桌</button>
-                        <button class="btn btn-dark btn-sm w-100" onclick="addBlackboard()">🏫 黑板</button>
-                        <button class="btn btn-warning btn-sm w-100 text-dark" onclick="addDoor()">🚪 新增門</button>
-                        <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat()">✨ 任意位置</button>
-                        <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject()">📦 新增物體</button>
-                        <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected()">🗑️ 刪除選取</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats()">♻️ 全部清空</button>
-                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas()">🔄 視角切換</button>
+                        <button class="btn btn-secondary btn-sm w-100" onclick="addTeacherDesk('main')">👩‍🏫 講桌</button>
+                        <button class="btn btn-dark btn-sm w-100" onclick="addBlackboard('main')">🏫 黑板</button>
+                        <button class="btn btn-warning btn-sm w-100 text-dark" onclick="addDoor('main')">🚪 門</button>
+                        <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('main')">✨ 自由座</button>
+                        <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('main')">📦 可命名物體</button>
+                        <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('main')">🗑️ 刪除選取</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('main')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('main')">🔄 視角切換</button>
                     </div>
                 </div>
                 <div class="col-md-8 text-center">
-                    <div class="canvas-area" id="canvas-container" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <div class="canvas-area" id="canvas-container-main" ondrop="drop(event, 'main')" ondragover="allowDrop(event)">
                         <canvas id="c" width="800" height="600"></canvas>
                     </div>
-                    <small class="text-muted mt-1 d-block">💡 拖曳可自動交換座位 (含自由座) | 虛線為輔助格線</small>
                 </div>
                 <div class="col-md-2" style="height: 600px;">
                     <div class="student-sidebar">
                         <h6 class="fw-bold text-center border-bottom pb-2">📋 學生名單</h6>
                         <div class="manual-input-group mb-2">
                             <input type="text" id="manualNameInput" class="form-control form-control-sm mb-1" placeholder="輸入姓名">
-                            <button class="btn btn-success btn-sm w-100 mb-1" onclick="addManualStudent()">➕ 加入名單</button>
-                            <button class="btn btn-primary btn-sm w-100" onclick="autoSeatStudents()">⚡ 自動入座</button>
+                            <button class="btn btn-success btn-sm w-100 mb-1" onclick="addManualStudent()">➕ 加入</button>
+                            <button class="btn btn-primary btn-sm w-100 mb-1" onclick="autoSeatStudents('main')">⚡ 自動入座</button>
+                            <button class="btn btn-info btn-sm w-100 text-white" onclick="randomizeSeats('main')">🎲 隨機分配</button>
                         </div>
-                        <div id="student-list-container" class="student-list-content">
-                            <div class="text-muted text-center small mt-3">請匯入或手動輸入</div>
+                        <div id="student-list-container" class="student-list-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="groups-panel" role="tabpanel">
+            <div class="undo-bar"><button class="btn btn-sm btn-outline-secondary" onclick="undo('groups')">↩️ 上一步</button></div>
+            <div class="row h-100">
+                <div class="col-md-2">
+                    <div class="p-3 bg-light rounded border h-100 overflow-auto">
+                        <h6 class="fw-bold">📐 分組配置</h6>
+                        <div class="row g-1 mb-2">
+                            <div class="col-6"><label>直排</label><input type="number" id="inputRowsGroup" class="form-control form-control-sm" value="6"></div>
+                            <div class="col-6"><label>橫列</label><input type="number" id="inputColsGroup" class="form-control form-control-sm" value="6"></div>
                         </div>
+                        <button class="btn btn-primary btn-sm w-100 mb-2" onclick="initGridSystem('group')">✨ 生成分組</button>
+                        
+                        <div class="slider-control">
+                            <div class="slider-label"><span>大小</span><span id="sizeValGroup">90</span></div>
+                            <input type="range" class="form-range" min="50" max="150" value="90" oninput="updateGridSettings('group', 'size', this.value)">
+                            <div class="slider-label"><span>↔️ 間距</span><span id="gapXValGroup">110</span></div>
+                            <input type="range" class="form-range" min="60" max="200" value="110" oninput="updateGridSettings('group', 'gapX', this.value)">
+                            <div class="slider-label"><span>↕️ 間距</span><span id="gapYValGroup">80</span></div>
+                            <input type="range" class="form-range" min="40" max="200" value="80" oninput="updateGridSettings('group', 'gapY', this.value)">
+                        </div>
+
+                        <div class="mb-2 text-center">
+                            <small class="text-muted">全體移動</small>
+                            <div class="d-pad">
+                                <div></div><button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('group', 0, -20)">⬆️</button><div></div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('group', -20, 0)">⬅️</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('group', 0, 20)">⬇️</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="shiftCanvas('group', 20, 0)">➡️</button>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold">🎨 點擊換色</h6>
+                        <div class="color-palette" id="colorPalette"></div>
+
+                        <hr>
+                        <h6 class="fw-bold">🛠️ 工具</h6>
+                        <button class="btn btn-secondary btn-sm w-100" onclick="addTeacherDesk('group')">👩‍🏫 講桌</button>
+                        <button class="btn btn-dark btn-sm w-100" onclick="addBlackboard('group')">🏫 黑板</button>
+                        <button class="btn btn-warning btn-sm w-100 text-dark" onclick="addDoor('group')">🚪 門</button>
+                        <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('group')">✨ 自由座</button>
+                        <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('group')">📦 可命名物體</button>
+                        <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('group')">🗑️ 刪除選取</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('group')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('group')">🔄 視角切換</button>
+                    </div>
+                </div>
+                <div class="col-md-8 text-center">
+                    <div class="canvas-area" id="canvas-container-group" ondrop="drop(event, 'group')" ondragover="allowDrop(event)">
+                        <canvas id="c-group" width="800" height="600"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-2" style="height: 600px;">
+                    <div class="student-sidebar">
+                        <h6 class="fw-bold text-center border-bottom pb-2">📋 學生名單</h6>
+                        <button class="btn btn-primary btn-sm w-100 mb-1" onclick="autoSeatStudents('group')">⚡ 自動入座</button>
+                        <button class="btn btn-info btn-sm w-100 mb-2 text-white" onclick="randomizeSeats('group')">🎲 隨機分配</button>
+                        <div id="student-list-container-group" class="student-list-content"></div>
                     </div>
                 </div>
             </div>
@@ -199,7 +293,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // --- 0. 核心設定與 Hotfix ---
+    // --- 0. 核心設定 ---
     (function() {
         const originalFillText = CanvasRenderingContext2D.prototype.fillText;
         CanvasRenderingContext2D.prototype.fillText = function(...args) {
@@ -209,472 +303,538 @@
     })();
     fabric.Object.prototype.objectCaching = false;
 
-    const canvas = new fabric.Canvas('c', { selection: true, backgroundColor: '#FFFFFF' });
-    const SEAT_WIDTH = 90, SEAT_HEIGHT = 50, GAP_X = 110, GAP_Y = 80;
-    
-    let gridConfig = { rows: 5, cols: 6, startX: 0, startY: 0 };
+    const canvasMain = new fabric.Canvas('c', { selection: true, backgroundColor: '#FFFFFF' });
+    const canvasGroup = new fabric.Canvas('c-group', { selection: true, backgroundColor: '#FFFFFF' });
+    let currentCanvas = canvasMain;
+    let currentMode = 'main';
+
+    let mainConfig = { rows: 5, cols: 6, startX: 0, startY: 0, seatW: 90, seatH: 50, gapX: 110, gapY: 80 };
+    let groupConfig = { rows: 6, cols: 6, startX: 0, startY: 0, seatW: 90, seatH: 50, gapX: 110, gapY: 80 };
+
     let studentMap = {}; 
-    let placedStudentIds = new Set(); 
+    let placedMain = new Set();
+    let placedGroup = new Set();
     let manualCounter = 1000;
     let activeInput = null;
 
-    const historyStack = { seats: [], cadres: [], cleaning: [] };
+    const historyStack = { seats: [], groups: [], cadres: [], cleaning: [] };
     const MAX_HISTORY = 20;
 
-    // V10.0 更新：完整幹部名單
+    // V13 Colors
+    const colors = [
+        '#FFAB91', '#F48FB1', '#CE93D8', '#B39DDB', '#9FA8DA', 
+        '#90CAF9', '#81D4FA', '#80CBC4', '#A5D6A7', '#C5E1A5', 
+        '#E6EE9C', '#FFF59D', '#FFE082', '#FFCC80', '#BCAAA4', '#FFFFFF'
+    ];
+    // V13 Group Default Colors (Yellow, White, Blue, Green)
+    const groupInitColors = ['#FFF9C4', '#FFFFFF', '#BBDEFB', '#C8E6C9'];
+    
+    const palette = document.getElementById('colorPalette');
+    colors.forEach(color => {
+        let btn = document.createElement('div');
+        btn.className = 'color-btn';
+        btn.style.backgroundColor = color;
+        btn.onclick = () => applyColorToSeat(color);
+        palette.appendChild(btn);
+    });
+
+    function applyColorToSeat(color) {
+        const activeObj = canvasGroup.getActiveObject();
+        if (activeObj) {
+            if(activeObj.type === 'activeSelection') {
+                activeObj.forEachObject(obj => { if(obj.isStudent) obj.item(0).set('fill', color); });
+            } else if(activeObj.isStudent) {
+                activeObj.item(0).set('fill', color);
+            }
+            canvasGroup.renderAll(); saveState('groups');
+        }
+    }
+
     const defaultCadresList = ["班長", "副班長", "學藝股長", "風紀股長", "衛生股長", "總務股長", "康樂股長", "牛奶長", "榮譽長", "國語小老師", "英語小老師", "數學小老師", "自然小老師", "社會小老師"];
     let cadreData = defaultCadresList.map(role => ({ role: role, student: "" }));
 
-    // V10.0 更新：完整掃區名單
     const defaultCleaningList = ["教室內掃地", "教室內拖地", "擦窗戶", "整理黑板", "整理電視電腦櫃", "一般垃圾", "回收垃圾", "洗手台", "陽台", "整理掃具", "走廊", "外掃區"];
     let cleaningTasks = defaultCleaningList.map(task => ({ name: task, count: 2, students: "" }));
 
-    // --- Tab Switch Logic ---
+    // --- Shift Logic (Global Move) ---
+    function shiftCanvas(mode, dx, dy) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let cfg = mode === 'main' ? mainConfig : groupConfig;
+        
+        saveState(mode === 'main' ? 'seats' : 'groups');
+        cfg.startX += dx;
+        cfg.startY += dy;
+
+        cvs.getObjects().forEach(obj => {
+            obj.left += dx;
+            obj.top += dy;
+            if (obj._startLeft !== undefined) { obj._startLeft += dx; obj._startTop += dy; }
+            obj.setCoords();
+        });
+        
+        const oldLines = cvs.getObjects().filter(o => o.isGridLine);
+        oldLines.forEach(o => cvs.remove(o));
+        drawGridLines(cvs, cfg);
+        cvs.renderAll();
+    }
+
     function switchTab(tabName) {
         activeInput = null;
         document.querySelectorAll('.active-target').forEach(e => e.classList.remove('active-target'));
         document.getElementById('mask-cadre').classList.remove('hidden');
         document.getElementById('mask-cleaning').classList.remove('hidden');
-        refreshSidebars();
+        if (tabName === 'seats') { currentCanvas = canvasMain; currentMode = 'main'; refreshSidebars(); } 
+        else if (tabName === 'groups') { currentCanvas = canvasGroup; currentMode = 'group'; currentCanvas.calcOffset(); refreshSidebars(); }
     }
 
-    // --- Undo Logic ---
     function saveState(type) {
         let state;
-        if (type === 'seats') {
-            state = JSON.stringify({
-                canvas: canvas.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat']), 
-                placedStudentIds: Array.from(placedStudentIds)
-            });
-        } else if (type === 'cadres') state = JSON.stringify(cadreData);
+        let props = ['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop'];
+        if (type === 'seats') state = JSON.stringify({ canvas: canvasMain.toJSON(props), placed: Array.from(placedMain), config: mainConfig });
+        else if (type === 'groups') state = JSON.stringify({ canvas: canvasGroup.toJSON(props), placed: Array.from(placedGroup), config: groupConfig });
+        else if (type === 'cadres') state = JSON.stringify(cadreData);
         else if (type === 'cleaning') state = JSON.stringify(cleaningTasks);
-        
         historyStack[type].push(state);
         if(historyStack[type].length > MAX_HISTORY) historyStack[type].shift();
     }
 
     function undo(type) {
-        if(historyStack[type].length === 0) { alert("沒有更早的紀錄了"); return; }
-        const stateStr = historyStack[type].pop();
-        const state = JSON.parse(stateStr);
-
+        if(historyStack[type].length === 0) { alert("無更早紀錄"); return; }
+        const state = JSON.parse(historyStack[type].pop());
         if(type === 'seats') {
-            canvas.loadFromJSON(state.canvas, function() {
-                placedStudentIds = new Set(state.placedStudentIds);
-                canvas.renderAll();
-                refreshSidebars();
-            });
+            mainConfig = state.config || mainConfig;
+            canvasMain.loadFromJSON(state.canvas, () => { placedMain = new Set(state.placed); canvasMain.renderAll(); refreshSidebars(); });
+        } else if (type === 'groups') {
+            groupConfig = state.config || groupConfig;
+            canvasGroup.loadFromJSON(state.canvas, () => { placedGroup = new Set(state.placed); canvasGroup.renderAll(); refreshSidebars(); });
         } else if(type === 'cadres') { cadreData = state; renderCadres(); }
         else if(type === 'cleaning') { cleaningTasks = state; renderCleaningList(); }
     }
 
-    canvas.on('object:modified', () => saveState('seats'));
-    canvas.on('object:added', (e) => { if(!e.target.isGridLine) saveState('seats'); });
-
-    // --- 1. Canvas 邏輯 (含自由座交換) ---
-    canvas.on('mouse:down', function(options) {
-        if(options.target && options.target.isStudent) {
-            options.target._startLeft = options.target.left;
-            options.target._startTop = options.target.top;
-        }
-    });
-
-    canvas.on('object:modified', function(options) {
-        const target = options.target;
-        if (!target) return;
+    [canvasMain, canvasGroup].forEach((c, idx) => {
+        let type = idx === 0 ? 'seats' : 'groups';
+        c.on('object:modified', () => saveState(type));
+        c.on('object:added', (e) => { if(!e.target.isGridLine) saveState(type); });
         
-        // 只處理學生座位 (包含 Grid & Free)
-        if (!target.isStudent) return;
-
-        let closestSlot = null;
-        let isGridTarget = !target.isFreeSeat;
-
-        if (isGridTarget) {
-            closestSlot = getClosestGridSlot(target.left, target.top);
-            if (!closestSlot) {
-                // 如果 Grid Seat 沒對齊格線，彈回
-                animateMove(target, target._startLeft, target._startTop);
-                return;
+        c.on('mouse:down', (opt) => {
+            if(opt.target) {
+                opt.target._startLeft = opt.target.left;
+                opt.target._startTop = opt.target.top;
             }
-        }
-
-        // 檢查碰撞 (與任何其他座位，無論 Grid 或 Free)
-        let occupiedObj = null;
-        canvas.getObjects().forEach(obj => {
-            if (obj === target) return;
-            if (!obj.isStudent) return;
-
-            // 碰撞檢測邏輯
-            let isCollision = false;
-            
-            if (isGridTarget) {
-                // 如果我是 Grid Seat，我在目標格線位置檢查是否有其他人 (人可能在格線上，也可能剛好 Free Seat 放在那)
-                isCollision = isAtPosition(obj, closestSlot.x, closestSlot.y);
-            } else {
-                // 如果我是 Free Seat，我檢查現在停的位置附近有沒有人
-                // 距離檢測
-                let dist = Math.sqrt(Math.pow(obj.left - target.left, 2) + Math.pow(obj.top - target.top, 2));
-                isCollision = dist < 30; // 靠近 30px 內算碰撞
-            }
-
-            if (isCollision) occupiedObj = obj;
         });
 
-        if (occupiedObj) {
-            // [交換]
-            // 對方去我原本的位置
-            animateMove(occupiedObj, target._startLeft, target._startTop);
-            
-            // 我去對方的位置 (或者我的目標格線位置)
+        // 自由座與一般座交換邏輯
+        c.on('object:modified', (opt) => {
+            const target = opt.target;
+            if (!target || !target.isStudent) return; // 略過非座位
+
+            let cfg = (c === canvasMain) ? mainConfig : groupConfig;
+            let closestSlot = null;
+            let isGridTarget = !target.isFreeSeat;
+
+            // 如果是一般座位，計算吸附
             if (isGridTarget) {
-                target.set({ left: closestSlot.x, top: closestSlot.y });
+                closestSlot = getClosestGridSlot(target.left, target.top, cfg);
+                if (!closestSlot) {
+                    animateMove(target, target._startLeft, target._startTop, c);
+                    return;
+                }
+            }
+
+            // 碰撞檢測 (任何座位之間)
+            let occupiedObj = null;
+            c.getObjects().forEach(obj => {
+                if (obj === target) return;
+                if (!obj.isStudent) return; // 只跟有 isStudent 的物件交換
+
+                let isCollision = false;
+                if (isGridTarget) {
+                    isCollision = isAtPosition(obj, closestSlot.x, closestSlot.y);
+                } else {
+                    let dist = Math.sqrt(Math.pow(obj.left - target.left, 2) + Math.pow(obj.top - target.top, 2));
+                    isCollision = dist < 40; // 擴大感應範圍
+                }
+                if (isCollision) occupiedObj = obj;
+            });
+
+            if (occupiedObj) {
+                // 交換
+                animateMove(occupiedObj, target._startLeft, target._startTop, c);
+                // 更新被交換物件的起始點，以便下次交換
+                occupiedObj._startLeft = target._startLeft;
+                occupiedObj._startTop = target._startTop;
+                
+                if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
+                // 若是自由座，停在碰撞點附近即可
+                target.setCoords();
             } else {
-                // 如果我是 Free Seat，我搶對方的位置 (如果是 Grid Seat，我就停在格子上，如果是 Free，就停在它座標)
-                // 為了視覺整齊，Free Seat 交換後停在原地即可 (已覆蓋對方)
-                // 但對方已經被彈走了
+                if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
+                target.setCoords();
             }
-            target.setCoords();
-        } else {
-            // [無碰撞]
-            if (isGridTarget) {
-                target.set({ left: closestSlot.x, top: closestSlot.y });
-            }
-            target.setCoords();
-        }
-        canvas.renderAll();
+            c.renderAll();
+        });
     });
 
     function isAtPosition(obj, x, y) { return Math.abs(obj.left - x) < 20 && Math.abs(obj.top - y) < 20; }
-    function getClosestGridSlot(x, y) {
-        let col = Math.round((x - gridConfig.startX) / GAP_X);
-        let row = Math.round((y - gridConfig.startY) / GAP_Y);
-        if (col < 0 || col >= gridConfig.cols || row < 0 || row >= gridConfig.rows) return null;
-        return { x: gridConfig.startX + col * GAP_X, y: gridConfig.startY + row * GAP_Y };
+    function getClosestGridSlot(x, y, cfg) {
+        let col = Math.round((x - cfg.startX) / cfg.gapX);
+        let row = Math.round((y - cfg.startY) / cfg.gapY);
+        if (col < 0 || col >= cfg.cols || row < 0 || row >= cfg.rows) return null;
+        return { x: cfg.startX + col * cfg.gapX, y: cfg.startY + row * cfg.gapY };
     }
-    function animateMove(obj, left, top) {
-        obj.animate({ left: left, top: top }, { duration: 200, onChange: canvas.renderAll.bind(canvas), easing: fabric.util.ease.easeOutQuad });
+    function animateMove(obj, left, top, c) {
+        obj.animate({ left: left, top: top }, { duration: 200, onChange: c.renderAll.bind(c), easing: fabric.util.ease.easeOutQuad });
     }
 
-    function initGridSystem() {
-        saveState('seats');
-        canvas.clear();
-        canvas.setBackgroundColor('#FFFFFF', canvas.renderAll.bind(canvas));
-        placedStudentIds.clear();
+    function updateGridSettings(mode, type, val) {
+        val = parseInt(val);
+        let cfg = (mode === 'main') ? mainConfig : groupConfig;
+        if (mode === 'main') {
+            if(type==='size') document.getElementById('sizeValMain').innerText = val;
+            if(type==='gapX') document.getElementById('gapXValMain').innerText = val;
+            if(type==='gapY') document.getElementById('gapYValMain').innerText = val;
+        } else {
+            if(type==='size') document.getElementById('sizeValGroup').innerText = val;
+            if(type==='gapX') document.getElementById('gapXValGroup').innerText = val;
+            if(type==='gapY') document.getElementById('gapYValGroup').innerText = val;
+        }
 
-        const rows = parseInt(document.getElementById('inputRows').value) || 5;
-        const cols = parseInt(document.getElementById('inputCols').value) || 6;
-        const totalWidth = (cols - 1) * GAP_X + SEAT_WIDTH; 
-        const startX = (canvas.width - totalWidth) / 2 + (SEAT_WIDTH/2); 
-        const startY = 100 + (SEAT_HEIGHT/2); 
-        gridConfig = { rows, cols, startX, startY };
-        drawGridLines();
+        if (type === 'size') { cfg.seatW = val; cfg.seatH = val * 0.6; }
+        else if (type === 'gapX') { cfg.gapX = val; }
+        else if (type === 'gapY') { cfg.gapY = val; }
+
+        initGridSystem(mode);
+    }
+
+    function initGridSystem(mode) {
+        let cvs = (mode === 'main') ? canvasMain : canvasGroup;
+        let cfg = (mode === 'main') ? mainConfig : groupConfig;
+        let placedSet = (mode === 'main') ? placedMain : placedGroup;
+        
+        saveState(mode === 'main' ? 'seats' : 'groups');
+        cvs.clear();
+        cvs.setBackgroundColor('#FFFFFF', cvs.renderAll.bind(cvs));
+        placedSet.clear();
+
+        if (mode === 'main') {
+            cfg.rows = parseInt(document.getElementById('inputRowsMain').value) || 5;
+            cfg.cols = parseInt(document.getElementById('inputColsMain').value) || 6;
+        } else {
+            cfg.rows = parseInt(document.getElementById('inputRowsGroup').value) || 6;
+            cfg.cols = parseInt(document.getElementById('inputColsGroup').value) || 6;
+        }
+        
+        const totalWidth = (cfg.cols - 1) * cfg.gapX + cfg.seatW;
+        cfg.startX = (cvs.width - totalWidth) / 2 + (cfg.seatW/2);
+        cfg.startY = 100 + (cfg.seatH/2);
+
+        drawGridLines(cvs, cfg);
 
         let counter = 1;
-        for(let r=0; r<rows; r++) {
-            for(let c=0; c<cols; c++) {
+        for(let r=0; r<cfg.rows; r++) {
+            for(let c=0; c<cfg.cols; c++) {
                 let id = counter.toString();
-                let x = startX + c * GAP_X;
-                let y = startY + r * GAP_Y;
-                let desk = createStudentDesk(id, x, y);
-                canvas.add(desk);
+                let x = cfg.startX + c * cfg.gapX;
+                let y = cfg.startY + r * cfg.gapY;
+                
+                if (mode === 'group') {
+                    if (counter <= 25) {
+                        // V13: Group Default Colors (Y, W, B, G)
+                        let color = groupInitColors[Math.floor((counter-1)/5) % 4]; 
+                        let desk = createStudentDesk(id, x, y, cfg.seatW, cfg.seatH, color);
+                        cvs.add(desk);
+                        if(studentMap[id]) { updateSeatText(desk, id); placedSet.add(id); }
+                    }
+                } else {
+                    let desk = createStudentDesk(id, x, y, cfg.seatW, cfg.seatH, '#FFECB3');
+                    cvs.add(desk);
+                    if(studentMap[id]) { updateSeatText(desk, id); placedSet.add(id); }
+                }
                 counter++;
             }
         }
-        addBlackboard(); addTeacherDesk();
+        addBlackboard(mode); addTeacherDesk(mode);
         refreshSidebars();
     }
 
-    function drawGridLines() {
-        const oldLines = canvas.getObjects().filter(o => o.isGridLine);
-        oldLines.forEach(o => canvas.remove(o));
-        for(let r=0; r<gridConfig.rows; r++) {
-            for(let c=0; c<gridConfig.cols; c++) {
-                let x = gridConfig.startX + c * GAP_X;
-                let y = gridConfig.startY + r * GAP_Y;
-                const rect = new fabric.Rect({ left: x, top: y, width: SEAT_WIDTH + 10, height: SEAT_HEIGHT + 10, fill: 'transparent', stroke: '#E0E0E0', strokeWidth: 1, strokeDashArray: [5, 5], originX: 'center', originY: 'center', selectable: false, evented: false });
+    function drawGridLines(cvs, cfg) {
+        const oldLines = cvs.getObjects().filter(o => o.isGridLine);
+        oldLines.forEach(o => cvs.remove(o));
+        for(let r=0; r<cfg.rows; r++) {
+            for(let c=0; c<cfg.cols; c++) {
+                let x = cfg.startX + c * cfg.gapX;
+                let y = cfg.startY + r * cfg.gapY;
+                const rect = new fabric.Rect({ 
+                    left: x, top: y, width: cfg.seatW + 10, height: cfg.seatH + 10, 
+                    fill: 'transparent', stroke: '#E0E0E0', strokeWidth: 1, strokeDashArray: [5, 5], 
+                    originX: 'center', originY: 'center', selectable: false, evented: false 
+                });
                 rect.isGridLine = true;
-                canvas.add(rect);
-                canvas.sendToBack(rect);
+                cvs.add(rect);
+                cvs.sendToBack(rect);
             }
         }
     }
 
-    function createStudentDesk(id, x, y) {
-        const desk = new fabric.Rect({ width: SEAT_WIDTH, height: SEAT_HEIGHT, fill: '#FFECB3', stroke: '#FFB74D', strokeWidth: 2, rx: 10, ry: 10, originX: 'center', originY: 'center' });
-        const text = new fabric.IText(id, { fontSize: 18, fill: '#5D4037', fontFamily: 'Microsoft JhengHei', fontWeight: 'bold', originX: 'center', originY: 'center', textAlign: 'center' });
+    function createStudentDesk(id, x, y, w, h, color) {
+        const desk = new fabric.Rect({ width: w, height: h, fill: color, stroke: '#FFB74D', strokeWidth: 2, rx: 10, ry: 10, originX: 'center', originY: 'center' });
+        const text = new fabric.IText(id, { fontSize: w * 0.2, fill: '#5D4037', fontFamily: 'Microsoft JhengHei', fontWeight: 'bold', originX: 'center', originY: 'center', textAlign: 'center' });
         const group = new fabric.Group([desk, text], { left: x, top: y, selectable: true, hasControls: false, originX: 'center', originY: 'center' });
         group.isStudent = true; group.studentId = id; 
         return group;
     }
 
-    function addFreeSeat() {
-        saveState('seats');
-        const x = canvas.width / 2;
-        const y = canvas.height / 2;
-        const desk = new fabric.Rect({ width: SEAT_WIDTH, height: SEAT_HEIGHT, fill: 'rgba(255, 236, 179, 0.5)', stroke: '#FF9800', strokeWidth: 2, strokeDashArray: [5, 5], rx: 10, ry: 10, originX: 'center', originY: 'center' });
-        const text = new fabric.IText("自由座", { fontSize: 16, fill: '#E65100', fontFamily: 'Microsoft JhengHei', fontWeight: 'bold', originX: 'center', originY: 'center', textAlign: 'center' });
-        const group = new fabric.Group([desk, text], { left: x, top: y, selectable: true, hasControls: true, originX: 'center', originY: 'center' });
-        group.isStudent = true; group.isFreeSeat = true; group.studentId = "";
-        canvas.add(group);
+    // --- 物件 Wrapper ---
+    function addTeacherDesk(mode) { 
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let objs = cvs.getObjects().filter(o => o.isTeacherDesk); objs.forEach(o => cvs.remove(o));
+        const rect = new fabric.Rect({ width: 100, height: 50, fill: '#A1887F', stroke: '#5D4037', strokeWidth: 2, originX: 'center', originY: 'center' });
+        const text = new fabric.Text("講桌", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' });
+        const group = new fabric.Group([rect, text], { left: cvs.width/2, top: 520, selectable: true, originX: 'center', originY: 'center' }); 
+        group.isTeacherDesk = true; cvs.add(group); 
     }
-
-    function clearAllSeats() {
-        saveState('seats');
-        canvas.getObjects().forEach(obj => {
+    function addBlackboard(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let objs = cvs.getObjects().filter(o => o.isBlackboard); objs.forEach(o => cvs.remove(o));
+        const rect = new fabric.Rect({ width: 500, height: 25, fill: '#2F4F2F', stroke: '#5D4037', strokeWidth: 3, rx:5, ry:5, originX: 'center', originY: 'center' });
+        const text = new fabric.Text("黑板", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' });
+        const group = new fabric.Group([rect, text], { left: cvs.width/2, top: 580, selectable: true, originX: 'center', originY: 'center' });
+        group.isBlackboard = true; cvs.add(group);
+    }
+    function addDoor(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        const rect = new fabric.Rect({ width: 60, height: 10, fill: '#8D6E63', stroke: '#5D4037', strokeWidth: 1, originX: 'center', originY: 'center' });
+        const doorLeaf = new fabric.Rect({ width: 60, height: 40, fill: 'rgba(141, 110, 99, 0.3)', stroke: '#8D6E63', strokeDashArray:[5,5], strokeWidth: 1, top: 25, originX: 'center', originY: 'center' });
+        const text = new fabric.Text("門", { fontSize: 14, fill: '#3E2723', top: -15, originX: 'center', originY: 'center' });
+        const group = new fabric.Group([rect, doorLeaf, text], { left: 50, top: 50, selectable: true, originX: 'center', originY: 'center' });
+        cvs.add(group);
+    }
+    // V13: Double-click to rename
+    function addCustomObject(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        const rect = new fabric.Rect({ width: 80, height: 40, fill: '#E0E0E0', stroke: '#9E9E9E', rx:5, ry:5, originX: 'center', originY: 'center' });
+        const text = new fabric.IText("物體", { fontSize: 14, fill: '#333', originX: 'center', originY: 'center' });
+        const group = new fabric.Group([rect, text], { left: 100, top: 100, selectable: true, originX: 'center', originY: 'center' });
+        
+        group.on('mousedblclick', () => {
+            let newName = prompt("請輸入新名稱:", text.text);
+            if(newName) { text.set('text', newName); cvs.renderAll(); }
+        });
+        cvs.add(group);
+    }
+    function addFreeSeat(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let cfg = mode === 'main' ? mainConfig : groupConfig;
+        saveState(mode === 'main' ? 'seats' : 'groups');
+        const desk = new fabric.Rect({ width: cfg.seatW, height: cfg.seatH, fill: 'rgba(255, 236, 179, 0.5)', stroke: '#FF9800', strokeWidth: 2, strokeDashArray: [5, 5], rx: 10, ry: 10, originX: 'center', originY: 'center' });
+        const text = new fabric.IText("自由座", { fontSize: 16, fill: '#E65100', fontFamily: 'Microsoft JhengHei', fontWeight: 'bold', originX: 'center', originY: 'center', textAlign: 'center' });
+        const group = new fabric.Group([desk, text], { left: cvs.width/2, top: cvs.height/2, selectable: true, hasControls: true, originX: 'center', originY: 'center' });
+        group.isStudent = true; group.isFreeSeat = true; group.studentId = "";
+        cvs.add(group);
+    }
+    function deleteSelected(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let placedSet = mode === 'main' ? placedMain : placedGroup;
+        saveState(mode === 'main' ? 'seats' : 'groups');
+        const activeObj = cvs.getActiveObject();
+        if(activeObj) {
+            if(activeObj.type === 'activeSelection') activeObj.forEachObject(obj => { if(obj.studentId) placedSet.delete(obj.studentId); });
+            else if(activeObj.studentId) placedSet.delete(activeObj.studentId);
+            cvs.remove(activeObj); cvs.discardActiveObject(); cvs.renderAll(); refreshSidebars();
+        }
+    }
+    function clearAllSeats(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let placedSet = mode === 'main' ? placedMain : placedGroup;
+        saveState(mode === 'main' ? 'seats' : 'groups');
+        cvs.getObjects().forEach(obj => {
             if(obj.isStudent) {
                 let textObj = obj.getObjects()[1];
                 let seatId = obj.studentId; 
-                if (obj.isFreeSeat) {
-                    textObj.set('text', "自由座");
-                    obj.studentId = "";
-                } else {
+                if (obj.isFreeSeat) { textObj.set('text', "自由座"); obj.studentId = ""; }
+                else {
                     let display = (seatId && parseInt(seatId) < 1000) ? (parseInt(seatId)<10 ? `0${seatId}` : seatId) : "";
                     textObj.set('text', display);
                 }
             }
         });
-        placedStudentIds.clear();
-        canvas.renderAll();
-        refreshSidebars();
+        placedSet.clear(); cvs.renderAll(); refreshSidebars();
+    }
+    function rotateCanvas(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        const cx = cvs.width / 2, cy = cvs.height / 2;
+        cvs.getObjects().forEach(obj => {
+            const newLeft = 2 * cx - obj.left;
+            const newTop = 2 * cy - obj.top;
+            obj.animate({ left: newLeft, top: newTop }, { duration: 500, onChange: cvs.renderAll.bind(cvs), easing: fabric.util.ease.easeInOutQuad });
+        });
     }
 
-    function autoSeatStudents() {
-        saveState('seats');
+    // --- 名單與自動/隨機入座 ---
+    function autoSeatStudents(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let placedSet = mode === 'main' ? placedMain : placedGroup;
+        saveState(mode === 'main' ? 'seats' : 'groups');
         const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        const seats = canvas.getObjects().filter(o => o.isStudent && !o.isFreeSeat);
+        // 一般座與自由座皆可填入
+        const seats = cvs.getObjects().filter(o => o.isStudent);
         seats.sort((a, b) => (a.top - b.top) || (a.left - b.left));
 
         let studentIdx = 0;
         seats.forEach(seat => {
             let currentId = seat.studentId;
-            let isOccupied = placedStudentIds.has(currentId) && studentMap[currentId];
+            let isOccupied = placedSet.has(currentId) && studentMap[currentId];
             if (!isOccupied && studentIdx < keys.length) {
-                while(studentIdx < keys.length && placedStudentIds.has(keys[studentIdx])) { studentIdx++; }
+                while(studentIdx < keys.length && placedSet.has(keys[studentIdx])) { studentIdx++; }
                 if(studentIdx < keys.length) {
                     let sId = keys[studentIdx];
                     updateSeatText(seat, sId);
                     seat.studentId = sId;
-                    placedStudentIds.add(sId);
+                    placedSet.add(sId);
                     studentIdx++;
                 }
             }
         });
-        canvas.renderAll(); refreshSidebars();
+        cvs.renderAll(); refreshSidebars();
     }
 
-    // --- 自由物件 ---
-    function addBlackboard() { removeObjectsByType('isBlackboard'); const rect = new fabric.Rect({ width: 500, height: 25, fill: '#2F4F2F', stroke: '#5D4037', strokeWidth: 3, rx:5, ry:5, originX: 'center', originY: 'center' }); const text = new fabric.Text("黑板", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' }); const group = new fabric.Group([rect, text], { left: canvas.width/2, top: 580, selectable: true, originX: 'center', originY: 'center' }); group.isBlackboard = true; canvas.add(group); }
-    function addTeacherDesk() { removeObjectsByType('isTeacherDesk'); const rect = new fabric.Rect({ width: 100, height: 50, fill: '#A1887F', stroke: '#5D4037', strokeWidth: 2, originX: 'center', originY: 'center' }); const text = new fabric.Text("講桌", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' }); const group = new fabric.Group([rect, text], { left: canvas.width/2, top: 520, selectable: true, originX: 'center', originY: 'center' }); group.isTeacherDesk = true; canvas.add(group); }
-    function addDoor() { const rect = new fabric.Rect({ width: 60, height: 10, fill: '#8D6E63', stroke: '#5D4037', strokeWidth: 1, originX: 'center', originY: 'center' }); const doorLeaf = new fabric.Rect({ width: 60, height: 40, fill: 'rgba(141, 110, 99, 0.3)', stroke: '#8D6E63', strokeDashArray:[5,5], strokeWidth: 1, top: 25, originX: 'center', originY: 'center' }); const text = new fabric.Text("門", { fontSize: 14, fill: '#3E2723', top: -15, originX: 'center', originY: 'center' }); const group = new fabric.Group([rect, doorLeaf, text], { left: 50, top: 50, selectable: true, originX: 'center', originY: 'center' }); canvas.add(group); }
-    function addCustomObject() { const rect = new fabric.Rect({ width: 80, height: 40, fill: '#E0E0E0', stroke: '#9E9E9E', rx:5, ry:5, originX: 'center', originY: 'center' }); const text = new fabric.IText("物體", { fontSize: 14, fill: '#333', originX: 'center', originY: 'center' }); const group = new fabric.Group([rect, text], { left: 100, top: 100, selectable: true, originX: 'center', originY: 'center' }); canvas.add(group); }
-    function removeObjectsByType(prop) { const objs = canvas.getObjects().filter(o => o[prop]); objs.forEach(o => canvas.remove(o)); }
-    
-    function rotateCanvas() {
-        const cx = canvas.width / 2, cy = canvas.height / 2;
-        canvas.getObjects().forEach(obj => {
-            const newLeft = 2 * cx - obj.left;
-            const newTop = 2 * cy - obj.top;
-            obj.animate({ left: newLeft, top: newTop }, { duration: 500, onChange: canvas.renderAll.bind(canvas), easing: fabric.util.ease.easeInOutQuad });
-        });
-    }
-
-    // --- 2. 資料整合 ---
-    function setActiveInput(el, type, index) {
-        document.querySelectorAll('.active-target').forEach(e => e.classList.remove('active-target'));
-        activeInput = { element: el, type: type, index: index };
-        el.classList.add('active-target');
+    // V13: Randomize Logic
+    function randomizeSeats(mode) {
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let placedSet = mode === 'main' ? placedMain : placedGroup;
+        saveState(mode === 'main' ? 'seats' : 'groups');
         
-        if(type === 'cadre') document.getElementById('mask-cadre').classList.add('hidden');
-        else if(type === 'cleaning') document.getElementById('mask-cleaning').classList.add('hidden');
+        // 1. 取得所有有效的學生 ID (從名單)
+        const allStudentIds = Object.keys(studentMap);
+        if (allStudentIds.length === 0) { alert("無學生名單"); return; }
+
+        // 2. 隨機打亂
+        allStudentIds.sort(() => Math.random() - 0.5);
+
+        // 3. 取得所有可用座位
+        const seats = cvs.getObjects().filter(o => o.isStudent);
+        // 按位置排序 (避免跳來跳去，讓隨機填入也有一種順序感，或者完全隨機分配)
+        // 這裡我們直接按座位的原始順序填入
         
-        refreshSidebars(); 
-    }
-
-    function addStudentToInput(displayStr) {
-        if (!activeInput) return;
-        saveState(activeInput.type === 'cadre' ? 'cadres' : 'cleaning');
+        // 清空當前狀態
+        placedSet.clear();
         
-        let currentValue = activeInput.element.value;
-        let newValue = currentValue ? `${currentValue}, ${displayStr}` : displayStr;
-        activeInput.element.value = newValue;
-
-        if (activeInput.type === 'cadre') cadreData[activeInput.index].student = newValue;
-        else if (activeInput.type === 'cleaning') cleaningTasks[activeInput.index].students = newValue;
-        
-        refreshSidebars();
-    }
-
-    function removeLastPerson(type, index) {
-        saveState(type === 'cadre' ? 'cadres' : 'cleaning');
-        let targetStr = type === 'cadre' ? cadreData[index].student : cleaningTasks[index].students;
-        if(!targetStr) return;
-        let arr = targetStr.split(',').map(s => s.trim());
-        arr.pop();
-        let newValue = arr.join(', ');
-        if (type === 'cadre') { cadreData[index].student = newValue; renderCadres(); } 
-        else { cleaningTasks[index].students = newValue; renderCleaningList(); }
-        refreshSidebars();
-    }
-
-    function renderCadres() {
-        const tbody = document.getElementById('cadreList');
-        tbody.innerHTML = "";
-        cadreData.forEach((item, index) => {
-            tbody.innerHTML += `
-                <tr>
-                    <td><input type="text" class="form-control" value="${item.role}" onchange="saveState('cadres'); cadreData[${index}].role = this.value"></td>
-                    <td>
-                        <input type="text" class="form-control target-input" 
-                               value="${item.student}" 
-                               placeholder="點擊鎖定或直接輸入"
-                               onclick="setActiveInput(this, 'cadre', ${index})"
-                               oninput="cadreData[${index}].student = this.value; refreshSidebars();"
-                               onchange="saveState('cadres');">
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cadre', ${index})">👤 刪除1人</button>
-                        <button class="btn btn-sm btn-danger" onclick="saveState('cadres'); cadreData.splice(${index}, 1); renderCadres();">刪除整列</button>
-                    </td>
-                </tr>`;
-        });
-    }
-    function addCadreRow() { saveState('cadres'); cadreData.push({ role: "", student: "" }); renderCadres(); }
-
-    function renderCleaningList() {
-        const tbody = document.getElementById('cleaningList');
-        tbody.innerHTML = "";
-        cleaningTasks.forEach((task, index) => {
-            tbody.innerHTML += `
-                <tr>
-                    <td><input type="text" class="form-control" value="${task.name}" onchange="saveState('cleaning'); cleaningTasks[${index}].name = this.value"></td>
-                    <td><input type="number" class="form-control" value="${task.count}" style="width:70px" onchange="saveState('cleaning'); cleaningTasks[${index}].count = this.value"></td>
-                    <td>
-                        <input type="text" class="form-control target-input" 
-                               value="${task.students}" 
-                               placeholder="點擊鎖定或直接輸入"
-                               onclick="setActiveInput(this, 'cleaning', ${index})"
-                               oninput="cleaningTasks[${index}].students = this.value; refreshSidebars();"
-                               onchange="saveState('cleaning');">
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cleaning', ${index})">👤 刪除1人</button>
-                        <button class="btn btn-sm btn-danger" onclick="saveState('cleaning'); cleaningTasks.splice(${index}, 1); renderCleaningList();">刪除整列</button>
-                    </td>
-                </tr>`;
-        });
-    }
-    function addCleaningTask() { saveState('cleaning'); cleaningTasks.push({ name: "", count: 1, students: "" }); renderCleaningList(); }
-
-    // --- 3. 側邊欄 ---
-    function refreshSidebars() {
-        refreshDragSidebar();
-        refreshPickerSidebar('picker-cadre', 'cadre');
-        refreshPickerSidebar('picker-cleaning', 'cleaning');
-    }
-
-    function refreshDragSidebar() {
-        const container = document.getElementById('student-list-container');
-        container.innerHTML = "";
-        const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        if(keys.length === 0) { container.innerHTML = `<div class="text-muted text-center small mt-3">請匯入或手動輸入</div>`; return; }
-
-        let hasUnassigned = false;
-        keys.forEach(key => {
-            if (!placedStudentIds.has(key)) {
-                hasUnassigned = true;
-                let name = studentMap[key];
-                let display = parseInt(key) >= 1000 ? name : (parseInt(key) < 10 ? `0${key} ${name}` : `${key} ${name}`);
-                
-                let div = document.createElement('div');
-                div.className = 'student-tag student-draggable';
-                div.draggable = true;
-                div.innerText = display;
-                div.dataset.id = key;
-                div.ondragstart = function(ev) { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.dataset.id); };
-                container.appendChild(div);
+        seats.forEach((seat, index) => {
+            if (index < allStudentIds.length) {
+                let sId = allStudentIds[index];
+                updateSeatText(seat, sId);
+                seat.studentId = sId;
+                placedSet.add(sId);
+            } else {
+                // 多餘座位清空
+                let textObj = seat.getObjects()[1];
+                if (seat.isFreeSeat) { textObj.set('text', "自由座"); seat.studentId = ""; }
+                else {
+                    // 嘗試還原格線座號? 很難，直接清空文字
+                    // 除非我們記錄了 Grid 的原始 index。
+                    // 這裡簡化：如果沒人，顯示空
+                    textObj.set('text', ""); 
+                    seat.studentId = ""; // 移除ID
+                }
             }
         });
-        if(!hasUnassigned) container.innerHTML = `<div class="text-success text-center mt-3">🎉 全員已就座</div>`;
+        
+        cvs.renderAll(); refreshSidebars();
     }
 
-    function isStudentUsed(displayStr, context) {
-        // V10 Fix: 精確檢查，避免字串部分匹配問題
-        let usedList = [];
-        if (context === 'cadre') {
-            cadreData.forEach(c => {
-                if(c.student) usedList.push(...c.student.split(',').map(s=>s.trim()));
+    // --- 設定檔存取 ---
+    function downloadConfig() {
+        const config = {
+            mainCanvas: canvasMain.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop']),
+            groupCanvas: canvasGroup.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop']),
+            placedMain: Array.from(placedMain), placedGroup: Array.from(placedGroup),
+            cadreData: cadreData, cleaningTasks: cleaningTasks, studentMap: studentMap,
+            mainConfig: mainConfig, groupConfig: groupConfig
+        };
+        const blob = new Blob([JSON.stringify(config)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '班級設定.json'; a.click();
+    }
+
+    function loadConfig(input) {
+        const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const config = JSON.parse(e.target.result);
+            studentMap = config.studentMap || {};
+            cadreData = config.cadreData || [];
+            cleaningTasks = config.cleaningTasks || [];
+            placedMain = new Set(config.placedMain); placedGroup = new Set(config.placedGroup);
+            mainConfig = config.mainConfig || mainConfig; groupConfig = config.groupConfig || groupConfig;
+            canvasMain.loadFromJSON(config.mainCanvas, () => canvasMain.renderAll());
+            canvasGroup.loadFromJSON(config.groupCanvas, () => canvasGroup.renderAll());
+            renderCadres(); renderCleaningList(); refreshSidebars();
+            document.getElementById('inputRowsMain').value = mainConfig.rows; document.getElementById('inputColsMain').value = mainConfig.cols;
+            document.getElementById('inputRowsGroup').value = groupConfig.rows; document.getElementById('inputColsGroup').value = groupConfig.cols;
+            alert("讀取成功！");
+        };
+        reader.readAsText(file); input.value = '';
+    }
+
+    function refreshSidebars() {
+        let cvsMode = currentMode;
+        let placedSet = cvsMode === 'main' ? placedMain : placedGroup;
+        const container = (cvsMode === 'main') ? document.getElementById('student-list-container') : document.getElementById('student-list-container-group');
+        if(container) {
+            container.innerHTML = "";
+            const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
+            let hasUn = false;
+            keys.forEach(key => {
+                if(!placedSet.has(key)) {
+                    hasUn = true;
+                    let name = studentMap[key];
+                    let display = parseInt(key) >= 1000 ? name : (parseInt(key) < 10 ? `0${key} ${name}` : `${key} ${name}`);
+                    let div = document.createElement('div');
+                    div.className = 'student-tag student-draggable';
+                    div.draggable = true;
+                    div.innerText = display;
+                    div.dataset.id = key;
+                    div.ondragstart = (ev) => { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.dataset.id); };
+                    container.appendChild(div);
+                }
             });
-        } else if (context === 'cleaning') {
-            cleaningTasks.forEach(t => {
-                if(t.students) usedList.push(...t.students.split(',').map(s=>s.trim()));
-            });
+            if(!hasUn) container.innerHTML = `<div class="text-success text-center mt-3">🎉 全員已就座</div>`;
         }
-        return usedList.includes(displayStr);
+        refreshPickerSidebar('picker-cadre', 'cadre'); refreshPickerSidebar('picker-cleaning', 'cleaning');
     }
 
-    function refreshPickerSidebar(containerId, context) {
-        const container = document.getElementById(containerId);
-        if(!container) return;
-        container.innerHTML = "";
-        
-        const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        if(keys.length === 0) { container.innerHTML = `<div class="text-muted text-center small mt-3">無名單資料</div>`; return; }
-
-        keys.forEach(key => {
-            let name = studentMap[key];
-            let display = parseInt(key) >= 1000 ? name : (parseInt(key) < 10 ? `0${key} ${name}` : `${key} ${name}`);
-            
-            let div = document.createElement('div');
-            let usedClass = isStudentUsed(display, context) ? 'used' : '';
-            div.className = `student-tag ${usedClass}`;
-            div.innerText = display;
-            
-            div.onclick = function() { addStudentToInput(display); };
-            container.appendChild(div);
-        });
-    }
-
-    // --- 4. 匯入匯出 ---
-    function addManualStudent() {
-        const input = document.getElementById('manualNameInput');
-        const name = input.value.trim();
-        if(!name) return;
-        const id = (manualCounter++).toString();
-        studentMap[id] = name;
-        input.value = '';
-        refreshSidebars();
-    }
-
-    function drop(ev) {
-        saveState('seats');
+    function drop(ev, mode) {
         ev.preventDefault();
+        let cvs = mode === 'main' ? canvasMain : canvasGroup;
+        let placedSet = mode === 'main' ? placedMain : placedGroup;
+        
         const studentId = ev.dataTransfer.getData("id"); 
-        const pointer = canvas.getPointer(ev);
+        const pointer = cvs.getPointer(ev);
         let targetObj = null;
-        
-        canvas.getObjects().forEach(obj => { if(obj.containsPoint(pointer)) targetObj = obj; });
-        
+        cvs.getObjects().forEach(obj => { if(obj.containsPoint(pointer)) targetObj = obj; });
+
+        saveState(mode === 'main' ? 'seats' : 'groups');
+
         if (targetObj && targetObj.isStudent) {
-            if(targetObj.studentId) placedStudentIds.delete(targetObj.studentId);
-            targetObj.studentId = studentId; updateSeatText(targetObj, studentId); placedStudentIds.add(studentId);
+            if(targetObj.studentId) placedSet.delete(targetObj.studentId);
+            targetObj.studentId = studentId; updateSeatText(targetObj, studentId); placedSet.add(studentId);
         } else {
-             let slot = getClosestGridSlot(pointer.x, pointer.y);
+             let cfg = mode === 'main' ? mainConfig : groupConfig;
+             let slot = getClosestGridSlot(pointer.x, pointer.y, cfg);
              if(slot) {
-                 let occupied = null; canvas.getObjects().forEach(o => { 
-                     if(o.isStudent && !o.isFreeSeat && isAtPosition(o, slot.x, slot.y)) occupied = o; 
-                 });
+                 let occupied = null; 
+                 cvs.getObjects().forEach(o => { if(o.isStudent && !o.isFreeSeat && isAtPosition(o, slot.x, slot.y)) occupied = o; });
                  if(occupied) {
-                     if(occupied.studentId) placedStudentIds.delete(occupied.studentId);
-                     occupied.studentId = studentId; updateSeatText(occupied, studentId); placedStudentIds.add(studentId);
+                     if(occupied.studentId) placedSet.delete(occupied.studentId);
+                     occupied.studentId = studentId; updateSeatText(occupied, studentId); placedSet.add(studentId);
                  } else {
-                     let desk = createStudentDesk(studentId, slot.x, slot.y);
-                     updateSeatText(desk, studentId); placedStudentIds.add(studentId); canvas.add(desk);
+                     let desk = createStudentDesk(studentId, slot.x, slot.y, cfg.seatW, cfg.seatH, '#FFECB3');
+                     updateSeatText(desk, studentId); placedSet.add(studentId); cvs.add(desk);
                  }
              }
         }
-        canvas.renderAll(); refreshSidebars();
+        cvs.renderAll(); refreshSidebars();
     }
-    
+
     function updateSeatText(groupObj, id) {
         const textObj = groupObj.getObjects()[1];
         let name = studentMap[id] || "";
@@ -682,109 +842,133 @@
         if(name && parseInt(id) < 1000) display += `\n${name}`;
         textObj.set('text', display); groupObj.addWithUpdate();
     }
+
+    function isStudentUsed(displayStr, context) {
+        let usedList = [];
+        if (context === 'cadre') cadreData.forEach(c => { if(c.student) usedList.push(...c.student.split(',').map(s=>s.trim())); });
+        else if (context === 'cleaning') cleaningTasks.forEach(t => { if(t.students) usedList.push(...t.students.split(',').map(s=>s.trim())); });
+        return usedList.includes(displayStr);
+    }
     
-    function deleteSelected() {
-        saveState('seats');
-        const activeObj = canvas.getActiveObject();
-        if(activeObj) {
-            if(activeObj.type === 'activeSelection') activeObj.forEachObject(obj => { if(obj.studentId) placedStudentIds.delete(obj.studentId); });
-            else if(activeObj.studentId) placedStudentIds.delete(activeObj.studentId);
-            canvas.remove(activeObj); canvas.discardActiveObject(); canvas.renderAll(); refreshSidebars();
-        }
+    function setActiveInput(el, type, index) {
+        document.querySelectorAll('.active-target').forEach(e => e.classList.remove('active-target'));
+        activeInput = { element: el, type: type, index: index };
+        el.classList.add('active-target');
+        if(type === 'cadre') document.getElementById('mask-cadre').classList.add('hidden');
+        else if(type === 'cleaning') document.getElementById('mask-cleaning').classList.add('hidden');
+        refreshSidebars(); 
+    }
+    function addStudentToInput(displayStr) {
+        if (!activeInput) return;
+        saveState(activeInput.type === 'cadre' ? 'cadres' : 'cleaning');
+        let currentValue = activeInput.element.value;
+        let newValue = currentValue ? `${currentValue}, ${displayStr}` : displayStr;
+        activeInput.element.value = newValue;
+        if (activeInput.type === 'cadre') cadreData[activeInput.index].student = newValue;
+        else if (activeInput.type === 'cleaning') cleaningTasks[activeInput.index].students = newValue;
+        refreshSidebars();
+    }
+    function renderCadres() {
+        const tbody = document.getElementById('cadreList'); tbody.innerHTML = "";
+        cadreData.forEach((item, index) => {
+            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${item.role}" onchange="saveState('cadres'); cadreData[${index}].role = this.value"></td><td><input type="text" class="form-control target-input" value="${item.student}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cadre', ${index})" oninput="cadreData[${index}].student = this.value; refreshSidebars();" onchange="saveState('cadres');"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cadre', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cadres'); cadreData.splice(${index}, 1); renderCadres();">刪除整列</button></td></tr>`;
+        });
+    }
+    function addCadreRow() { saveState('cadres'); cadreData.push({ role: "", student: "" }); renderCadres(); }
+    function renderCleaningList() {
+        const tbody = document.getElementById('cleaningList'); tbody.innerHTML = "";
+        cleaningTasks.forEach((task, index) => {
+            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${task.name}" onchange="saveState('cleaning'); cleaningTasks[${index}].name = this.value"></td><td><input type="number" class="form-control" value="${task.count}" style="width:70px" onchange="saveState('cleaning'); cleaningTasks[${index}].count = this.value"></td><td><input type="text" class="form-control target-input" value="${task.students}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cleaning', ${index})" oninput="cleaningTasks[${index}].students = this.value; refreshSidebars();" onchange="saveState('cleaning');"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cleaning', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cleaning'); cleaningTasks.splice(${index}, 1); renderCleaningList();">刪除整列</button></td></tr>`;
+        });
+    }
+    function addCleaningTask() { saveState('cleaning'); cleaningTasks.push({ name: "", count: 1, students: "" }); renderCleaningList(); }
+    function removeLastPerson(type, index) {
+        saveState(type === 'cadre' ? 'cadres' : 'cleaning');
+        let targetStr = type === 'cadre' ? cadreData[index].student : cleaningTasks[index].students;
+        if(!targetStr) return;
+        let arr = targetStr.split(',').map(s => s.trim()); arr.pop(); let newValue = arr.join(', ');
+        if (type === 'cadre') { cadreData[index].student = newValue; renderCadres(); } 
+        else { cleaningTasks[index].students = newValue; renderCleaningList(); }
+        refreshSidebars();
+    }
+    function refreshPickerSidebar(containerId, context) {
+        const container = document.getElementById(containerId); if(!container) return; container.innerHTML = "";
+        const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
+        if(keys.length === 0) { container.innerHTML = `<div class="text-muted text-center small mt-3">無名單</div>`; return; }
+        keys.forEach(key => {
+            let name = studentMap[key];
+            let display = parseInt(key) >= 1000 ? name : (parseInt(key) < 10 ? `0${key} ${name}` : `${key} ${name}`);
+            let div = document.createElement('div');
+            let usedClass = isStudentUsed(display, context) ? 'used' : '';
+            div.className = `student-tag ${usedClass}`; div.innerText = display;
+            div.onclick = function() { addStudentToInput(display); };
+            container.appendChild(div);
+        });
     }
 
+    // --- Import/Export Helpers ---
+    function addManualStudent() {
+        const input = document.getElementById('manualNameInput'); const name = input.value.trim(); if(!name) return;
+        const id = (manualCounter++).toString(); studentMap[id] = name; input.value = ''; refreshSidebars();
+    }
     function importStudentExcel(input) {
         const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                initGridSystem(); 
-                const data = new Uint8Array(e.target.result);
-                const wb = XLSX.read(data, {type: 'array'});
-                const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                studentMap = {}; placedStudentIds.clear(); 
-                jsonData.forEach(row => {
-                    let num = row["座號"] || row["Number"];
-                    let name = row["姓名"] || row["Name"];
-                    if(num && name) studentMap[num.toString()] = name;
-                });
-                refreshSidebars();
-                alert(`匯入完成！`);
-            } catch(err) { alert("讀取失敗"); }
-        };
-        reader.readAsArrayBuffer(file); input.value = '';
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type: 'array'});
+            const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            studentMap = {}; placedMain.clear(); placedGroup.clear();
+            jsonData.forEach(row => {
+                let num = row["座號"] || row["Number"];
+                let name = row["姓名"] || row["Name"];
+                if(num && name) studentMap[num.toString()] = name;
+            });
+            initGridSystem('main'); initGridSystem('group'); 
+            alert(`匯入完成！`);
+        }; reader.readAsArrayBuffer(file); input.value = '';
     }
-    
     function downloadExampleExcel() {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet([["座號", "姓名"], [1, "王小明"], [2, "陳大山"]]);
         XLSX.utils.book_append_sheet(wb, ws, "名單"); XLSX.writeFile(wb, "範例.xlsx");
     }
-
     function exportToWord() {
-        // 暫時隱藏格線
-        canvas.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 0); });
-        canvas.renderAll();
-        
-        const imgData = canvas.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' });
-        
-        // 恢復格線
-        canvas.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 1); });
-        canvas.renderAll();
-        
+        [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 0); }); cvs.renderAll(); });
+        const imgMain = canvasMain.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' });
+        const imgGroup = canvasGroup.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' });
+        [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 1); }); cvs.renderAll(); });
+
         let cadreHtml = '<table border="1" style="border-collapse:collapse; width:100%; text-align:center;"><tr><th style="background:#FFE082">職稱</th><th style="background:#FFE082">負責學生</th></tr>';
-        cadreData.forEach(c => { cadreHtml += `<tr><td>${c.role}</td><td>${c.student}</td></tr>`; });
-        cadreHtml += '</table>';
-
+        cadreData.forEach(c => { cadreHtml += `<tr><td>${c.role}</td><td>${c.student}</td></tr>`; }); cadreHtml += '</table>';
         let cleaningHtml = '<table border="1" style="border-collapse:collapse; width:100%; text-align:center;"><tr><th style="background:#FFE082">工作項目</th><th style="background:#FFE082">人數</th><th style="background:#FFE082">負責學生</th></tr>';
-        cleaningTasks.forEach(t => { cleaningHtml += `<tr><td>${t.name}</td><td>${t.count}</td><td>${t.students}</td></tr>`; });
-        cleaningHtml += '</table>';
+        cleaningTasks.forEach(t => { cleaningHtml += `<tr><td>${t.name}</td><td>${t.count}</td><td>${t.students}</td></tr>`; }); cleaningHtml += '</table>';
 
-        const html = `
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-            <head><meta charset='utf-8'></head>
-            <body style="font-family: 'Microsoft JhengHei', sans-serif;">
-                <h2 style="color:#E65100">班級座位表</h2>
-                <img src="${imgData}" width="600"><br><br>
-                <h2 style="color:#E65100">班級幹部名單</h2>
-                ${cadreHtml}
-                <br>
-                <h2 style="color:#E65100">掃地工作分配</h2>
-                ${cleaningHtml}
-            </body>
-            </html>`;
+        const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'></head><body style="font-family: 'Microsoft JhengHei', sans-serif;"><h2 style="color:#E65100">班級座位表 (一般)</h2><img src="${imgMain}" width="600"><br><br><h2 style="color:#E65100">分組座位表</h2><img src="${imgGroup}" width="600"><br><br><h2 style="color:#E65100">班級幹部名單</h2>${cadreHtml}<br><h2 style="color:#E65100">掃地工作分配</h2>${cleaningHtml}</body></html>`;
         const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '班級資料.doc'; a.click();
     }
-
     function exportToExcel() {
         const wb = XLSX.utils.book_new();
-        let seatRows = [["--- 座位表配置 (僅供參考) ---"]];
-        let students = canvas.getObjects().filter(o => o.isStudent).sort((a,b) => (a.top - b.top) || (a.left - b.left));
-        students.forEach(s => { let text = s.getObjects()[1].text.replace('\n', ' '); seatRows.push([text]); });
-        const wsSeats = XLSX.utils.aoa_to_sheet(seatRows);
-        XLSX.utils.book_append_sheet(wb, wsSeats, "座位表文字版");
-
+        let mainRows = [["--- 一般座位 ---"]];
+        let students = canvasMain.getObjects().filter(o => o.isStudent).sort((a,b) => (a.top - b.top) || (a.left - b.left));
+        students.forEach(s => { let text = s.getObjects()[1].text.replace('\n', ' '); mainRows.push([text]); });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mainRows), "座位表(一般)");
         const wsCadres = XLSX.utils.json_to_sheet(cadreData.map(c => ({ "職稱": c.role, "負責學生": c.student })));
         XLSX.utils.book_append_sheet(wb, wsCadres, "幹部名單");
-
         const wsCleaning = XLSX.utils.json_to_sheet(cleaningTasks.map(t => ({ "工作項目": t.name, "人數": t.count, "負責學生": t.students })));
         XLSX.utils.book_append_sheet(wb, wsCleaning, "掃區名單");
-
         XLSX.writeFile(wb, "班級經營資料.xlsx");
     }
-
     function allowDrop(ev) { ev.preventDefault(); }
-    
-    document.querySelectorAll('.nav-link').forEach(btn => {
-        btn.addEventListener('click', e => {
-            document.querySelectorAll('.nav-link, .tab-pane').forEach(el => el.classList.remove('active', 'show'));
-            e.target.classList.add('active');
-            document.querySelector(e.target.getAttribute('data-bs-target')).classList.add('active', 'show');
-        });
-    });
 
-    window.onload = function() { initGridSystem(); renderCadres(); renderCleaningList(); switchTab('seats'); }
+    window.onload = function() { 
+        initGridSystem('main'); 
+        initGridSystem('group'); 
+        renderCadres(); 
+        renderCleaningList(); 
+        switchTab('seats'); 
+    }
 </script>
 
 </body>
