@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級經營助手 V.13.0</title>
+    <title>班級經營助手 V.14.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -30,13 +30,14 @@
             background-color: #FFF; margin: 0 auto; display: inline-block;
         }
         
+        /* 側邊欄容器 */
         .student-sidebar {
             background: #E1F5FE; border: 2px solid #81D4FA; border-radius: 15px; padding: 10px;
             height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative;
         }
         .student-list-content { flex: 1; overflow-y: auto; margin-top: 10px; }
         
-        /* 遮罩 */
+        /* 安全鎖遮罩 */
         .sidebar-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); z-index: 10;
@@ -53,19 +54,23 @@
         }
         .student-tag:hover { background: #81D4FA; color: white; transform: translateX(5px); }
         .student-tag:active { transform: scale(0.95); }
+        
         .student-tag.used { background-color: #ECEFF1; color: #90A4AE; border-color: #CFD8DC; }
         .student-tag.used:hover { background-color: #B0BEC5; color: white; }
+
         .student-draggable { cursor: grab; }
         
         .footer { margin-top: auto; text-align: center; color: #8D6E63; padding-top: 20px; border-top: 2px dashed #FFCC80; }
         .footer a { background-color: #FF7043; color: white; padding: 5px 15px; border-radius: 20px; text-decoration: none; }
         
         .manual-input-group { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+        
         .table-custom th { background-color: #FFE082; color: #5D4037; text-align: center; }
         .tab-pane { height: 100%; overflow-y: auto; }
         
         input.target-input:focus { border: 2px solid #FFAB40; background-color: #FFF8E1; box-shadow: 0 0 8px rgba(255, 171, 64, 0.5); }
         input.active-target { border: 2px solid #FF5722 !important; background-color: #FFCCBC !important; }
+
         .undo-bar { margin-bottom: 10px; text-align: right; }
 
         /* 顏色選擇器 */
@@ -80,13 +85,16 @@
         /* 方向鍵 */
         .d-pad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; width: 100px; margin: 0 auto; }
         .d-pad button { padding: 2px 0; font-size: 1.2rem; }
+
+        /* 批次貼上區塊 */
+        .batch-paste-area { margin-top: 10px; display: none; background: #fff; padding: 10px; border: 1px dashed #039BE5; border-radius: 8px; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid main-container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.13.0</small></h3>
+        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.14.0</small></h3>
         <div class="d-flex gap-2">
             <button class="btn btn-sm btn-dark" onclick="downloadConfig()">💾 下載設定</button>
             <button class="btn btn-sm btn-warning" onclick="document.getElementById('configInput').click()">📂 讀取設定</button>
@@ -165,7 +173,17 @@
                             <input type="text" id="manualNameInput" class="form-control form-control-sm mb-1" placeholder="輸入姓名">
                             <button class="btn btn-success btn-sm w-100 mb-1" onclick="addManualStudent()">➕ 加入</button>
                             <button class="btn btn-primary btn-sm w-100 mb-1" onclick="autoSeatStudents('main')">⚡ 自動入座</button>
-                            <button class="btn btn-info btn-sm w-100 text-white" onclick="randomizeSeats('main')">🎲 隨機分配</button>
+                            <button class="btn btn-info btn-sm w-100 text-white mb-1" onclick="randomizeSeats('main')">🎲 隨機分配</button>
+                            <button class="btn btn-outline-primary btn-sm w-100" onclick="toggleBatchPaste()">📋 批次貼上</button>
+                            
+                            <div id="batchPasteArea" class="batch-paste-area">
+                                <small class="text-muted d-block mb-1">一行一位 (座號+姓名 或 僅姓名)</small>
+                                <textarea id="batchInput" class="form-control form-control-sm mb-2" rows="5" placeholder="例如：
+01 王小明
+02 李大同
+陳小美"></textarea>
+                                <button class="btn btn-sm btn-primary w-100" onclick="processBatchPaste()">確認匯入</button>
+                            </div>
                         </div>
                         <div id="student-list-container" class="student-list-content"></div>
                     </div>
@@ -320,13 +338,11 @@
     const historyStack = { seats: [], groups: [], cadres: [], cleaning: [] };
     const MAX_HISTORY = 20;
 
-    // V13 Colors
     const colors = [
         '#FFAB91', '#F48FB1', '#CE93D8', '#B39DDB', '#9FA8DA', 
         '#90CAF9', '#81D4FA', '#80CBC4', '#A5D6A7', '#C5E1A5', 
         '#E6EE9C', '#FFF59D', '#FFE082', '#FFCC80', '#BCAAA4', '#FFFFFF'
     ];
-    // V13 Group Default Colors (Yellow, White, Blue, Green)
     const groupInitColors = ['#FFF9C4', '#FFFFFF', '#BBDEFB', '#C8E6C9'];
     
     const palette = document.getElementById('colorPalette');
@@ -356,22 +372,56 @@
     const defaultCleaningList = ["教室內掃地", "教室內拖地", "擦窗戶", "整理黑板", "整理電視電腦櫃", "一般垃圾", "回收垃圾", "洗手台", "陽台", "整理掃具", "走廊", "外掃區"];
     let cleaningTasks = defaultCleaningList.map(task => ({ name: task, count: 2, students: "" }));
 
-    // --- Shift Logic (Global Move) ---
+    // --- Batch Paste Feature (V14) ---
+    function toggleBatchPaste() {
+        const area = document.getElementById('batchPasteArea');
+        area.style.display = area.style.display === 'none' || area.style.display === '' ? 'block' : 'none';
+    }
+
+    function processBatchPaste() {
+        const text = document.getElementById('batchInput').value;
+        const lines = text.split('\n');
+        let count = 0;
+        
+        lines.forEach(line => {
+            line = line.trim();
+            if(!line) return;
+            // Match "01 Name", "1. Name", "1,Name", "1 Name"
+            const match = line.match(/^(\d+)[\s\t\.\,、]+(.+)$/);
+            
+            if (match) {
+                let num = match[1];
+                let name = match[2].trim();
+                // 移除可能的 leading zeros for storage consistency if needed, but keeping as string is safer
+                studentMap[num] = name;
+                count++;
+            } else {
+                // No number found, treat as just name
+                if (!/^\d+$/.test(line)) {
+                    let id = (manualCounter++).toString();
+                    studentMap[id] = line;
+                    count++;
+                }
+            }
+        });
+        
+        document.getElementById('batchInput').value = '';
+        toggleBatchPaste();
+        refreshSidebars();
+        alert(`已成功匯入 ${count} 筆資料`);
+    }
+
+    // --- Shift Logic ---
     function shiftCanvas(mode, dx, dy) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let cfg = mode === 'main' ? mainConfig : groupConfig;
-        
         saveState(mode === 'main' ? 'seats' : 'groups');
-        cfg.startX += dx;
-        cfg.startY += dy;
-
+        cfg.startX += dx; cfg.startY += dy;
         cvs.getObjects().forEach(obj => {
-            obj.left += dx;
-            obj.top += dy;
+            obj.left += dx; obj.top += dy;
             if (obj._startLeft !== undefined) { obj._startLeft += dx; obj._startTop += dy; }
             obj.setCoords();
         });
-        
         const oldLines = cvs.getObjects().filter(o => o.isGridLine);
         oldLines.forEach(o => cvs.remove(o));
         drawGridLines(cvs, cfg);
@@ -423,16 +473,14 @@
             }
         });
 
-        // 自由座與一般座交換邏輯
         c.on('object:modified', (opt) => {
             const target = opt.target;
-            if (!target || !target.isStudent) return; // 略過非座位
+            if (!target || !target.isStudent) return; 
 
             let cfg = (c === canvasMain) ? mainConfig : groupConfig;
             let closestSlot = null;
             let isGridTarget = !target.isFreeSeat;
 
-            // 如果是一般座位，計算吸附
             if (isGridTarget) {
                 closestSlot = getClosestGridSlot(target.left, target.top, cfg);
                 if (!closestSlot) {
@@ -441,31 +489,26 @@
                 }
             }
 
-            // 碰撞檢測 (任何座位之間)
             let occupiedObj = null;
             c.getObjects().forEach(obj => {
                 if (obj === target) return;
-                if (!obj.isStudent) return; // 只跟有 isStudent 的物件交換
+                if (!obj.isStudent) return;
 
                 let isCollision = false;
                 if (isGridTarget) {
                     isCollision = isAtPosition(obj, closestSlot.x, closestSlot.y);
                 } else {
                     let dist = Math.sqrt(Math.pow(obj.left - target.left, 2) + Math.pow(obj.top - target.top, 2));
-                    isCollision = dist < 40; // 擴大感應範圍
+                    isCollision = dist < 40; 
                 }
                 if (isCollision) occupiedObj = obj;
             });
 
             if (occupiedObj) {
-                // 交換
                 animateMove(occupiedObj, target._startLeft, target._startTop, c);
-                // 更新被交換物件的起始點，以便下次交換
                 occupiedObj._startLeft = target._startLeft;
                 occupiedObj._startTop = target._startTop;
-                
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
-                // 若是自由座，停在碰撞點附近即可
                 target.setCoords();
             } else {
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
@@ -539,7 +582,6 @@
                 
                 if (mode === 'group') {
                     if (counter <= 25) {
-                        // V13: Group Default Colors (Y, W, B, G)
                         let color = groupInitColors[Math.floor((counter-1)/5) % 4]; 
                         let desk = createStudentDesk(id, x, y, cfg.seatW, cfg.seatH, color);
                         cvs.add(desk);
@@ -584,7 +626,6 @@
         return group;
     }
 
-    // --- 物件 Wrapper ---
     function addTeacherDesk(mode) { 
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let objs = cvs.getObjects().filter(o => o.isTeacherDesk); objs.forEach(o => cvs.remove(o));
@@ -609,13 +650,11 @@
         const group = new fabric.Group([rect, doorLeaf, text], { left: 50, top: 50, selectable: true, originX: 'center', originY: 'center' });
         cvs.add(group);
     }
-    // V13: Double-click to rename
     function addCustomObject(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         const rect = new fabric.Rect({ width: 80, height: 40, fill: '#E0E0E0', stroke: '#9E9E9E', rx:5, ry:5, originX: 'center', originY: 'center' });
         const text = new fabric.IText("物體", { fontSize: 14, fill: '#333', originX: 'center', originY: 'center' });
         const group = new fabric.Group([rect, text], { left: 100, top: 100, selectable: true, originX: 'center', originY: 'center' });
-        
         group.on('mousedblclick', () => {
             let newName = prompt("請輸入新名稱:", text.text);
             if(newName) { text.set('text', newName); cvs.renderAll(); }
@@ -670,14 +709,12 @@
         });
     }
 
-    // --- 名單與自動/隨機入座 ---
     function autoSeatStudents(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let placedSet = mode === 'main' ? placedMain : placedGroup;
         saveState(mode === 'main' ? 'seats' : 'groups');
         const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        // 一般座與自由座皆可填入
-        const seats = cvs.getObjects().filter(o => o.isStudent);
+        const seats = cvs.getObjects().filter(o => o.isStudent); // Include Free Seats
         seats.sort((a, b) => (a.top - b.top) || (a.left - b.left));
 
         let studentIdx = 0;
@@ -698,25 +735,16 @@
         cvs.renderAll(); refreshSidebars();
     }
 
-    // V13: Randomize Logic
     function randomizeSeats(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let placedSet = mode === 'main' ? placedMain : placedGroup;
         saveState(mode === 'main' ? 'seats' : 'groups');
         
-        // 1. 取得所有有效的學生 ID (從名單)
         const allStudentIds = Object.keys(studentMap);
         if (allStudentIds.length === 0) { alert("無學生名單"); return; }
-
-        // 2. 隨機打亂
         allStudentIds.sort(() => Math.random() - 0.5);
 
-        // 3. 取得所有可用座位
         const seats = cvs.getObjects().filter(o => o.isStudent);
-        // 按位置排序 (避免跳來跳去，讓隨機填入也有一種順序感，或者完全隨機分配)
-        // 這裡我們直接按座位的原始順序填入
-        
-        // 清空當前狀態
         placedSet.clear();
         
         seats.forEach((seat, index) => {
@@ -726,23 +754,14 @@
                 seat.studentId = sId;
                 placedSet.add(sId);
             } else {
-                // 多餘座位清空
                 let textObj = seat.getObjects()[1];
                 if (seat.isFreeSeat) { textObj.set('text', "自由座"); seat.studentId = ""; }
-                else {
-                    // 嘗試還原格線座號? 很難，直接清空文字
-                    // 除非我們記錄了 Grid 的原始 index。
-                    // 這裡簡化：如果沒人，顯示空
-                    textObj.set('text', ""); 
-                    seat.studentId = ""; // 移除ID
-                }
+                else { textObj.set('text', ""); seat.studentId = ""; }
             }
         });
-        
         cvs.renderAll(); refreshSidebars();
     }
 
-    // --- 設定檔存取 ---
     function downloadConfig() {
         const config = {
             mainCanvas: canvasMain.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop']),
@@ -806,12 +825,10 @@
         ev.preventDefault();
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let placedSet = mode === 'main' ? placedMain : placedGroup;
-        
         const studentId = ev.dataTransfer.getData("id"); 
         const pointer = cvs.getPointer(ev);
         let targetObj = null;
         cvs.getObjects().forEach(obj => { if(obj.containsPoint(pointer)) targetObj = obj; });
-
         saveState(mode === 'main' ? 'seats' : 'groups');
 
         if (targetObj && targetObj.isStudent) {
@@ -906,7 +923,6 @@
         });
     }
 
-    // --- Import/Export Helpers ---
     function addManualStudent() {
         const input = document.getElementById('manualNameInput'); const name = input.value.trim(); if(!name) return;
         const id = (manualCounter++).toString(); studentMap[id] = name; input.value = ''; refreshSidebars();
