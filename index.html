@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級經營助手 V.14.0</title>
+    <title>班級經營助手 V.14.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     
     <style>
         :root { --bg-color: #FFF8E1; --primary-color: #FFAB40; --text-color: #5D4037; }
@@ -30,14 +32,12 @@
             background-color: #FFF; margin: 0 auto; display: inline-block;
         }
         
-        /* 側邊欄容器 */
         .student-sidebar {
             background: #E1F5FE; border: 2px solid #81D4FA; border-radius: 15px; padding: 10px;
             height: 100%; overflow-y: auto; display: flex; flex-direction: column; position: relative;
         }
         .student-list-content { flex: 1; overflow-y: auto; margin-top: 10px; }
         
-        /* 安全鎖遮罩 */
         .sidebar-mask {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); z-index: 10;
@@ -47,46 +47,37 @@
         }
         .sidebar-mask.hidden { display: none; }
 
-        /* 學生標籤 */
         .student-tag {
             background: #FFF; border: 1px solid #039BE5; padding: 8px; margin-bottom: 5px; border-radius: 8px;
             cursor: pointer; font-weight: bold; color: #0277BD; transition: all 0.2s; text-align: center; user-select: none;
         }
         .student-tag:hover { background: #81D4FA; color: white; transform: translateX(5px); }
         .student-tag:active { transform: scale(0.95); }
-        
         .student-tag.used { background-color: #ECEFF1; color: #90A4AE; border-color: #CFD8DC; }
         .student-tag.used:hover { background-color: #B0BEC5; color: white; }
-
         .student-draggable { cursor: grab; }
         
         .footer { margin-top: auto; text-align: center; color: #8D6E63; padding-top: 20px; border-top: 2px dashed #FFCC80; }
         .footer a { background-color: #FF7043; color: white; padding: 5px 15px; border-radius: 20px; text-decoration: none; }
         
         .manual-input-group { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
-        
         .table-custom th { background-color: #FFE082; color: #5D4037; text-align: center; }
         .tab-pane { height: 100%; overflow-y: auto; }
         
         input.target-input:focus { border: 2px solid #FFAB40; background-color: #FFF8E1; box-shadow: 0 0 8px rgba(255, 171, 64, 0.5); }
         input.active-target { border: 2px solid #FF5722 !important; background-color: #FFCCBC !important; }
-
         .undo-bar { margin-bottom: 10px; text-align: right; }
 
-        /* 顏色選擇器 */
         .color-palette { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; justify-content: center; }
         .color-btn { width: 30px; height: 30px; border-radius: 5px; border: 1px solid #999; cursor: pointer; transition: transform 0.2s; }
         .color-btn:hover { transform: scale(1.2); z-index: 10; border-color: #000; }
 
-        /* 滑動條區塊 */
         .slider-control { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; }
         .slider-label { font-size: 0.8rem; font-weight: bold; color: #666; display: flex; justify-content: space-between; }
         
-        /* 方向鍵 */
         .d-pad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; width: 100px; margin: 0 auto; }
         .d-pad button { padding: 2px 0; font-size: 1.2rem; }
 
-        /* 批次貼上區塊 */
         .batch-paste-area { margin-top: 10px; display: none; background: #fff; padding: 10px; border: 1px dashed #039BE5; border-radius: 8px; }
     </style>
 </head>
@@ -94,7 +85,7 @@
 
 <div class="container-fluid main-container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.14.0</small></h3>
+        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.14.1</small></h3>
         <div class="d-flex gap-2">
             <button class="btn btn-sm btn-dark" onclick="downloadConfig()">💾 下載設定</button>
             <button class="btn btn-sm btn-warning" onclick="document.getElementById('configInput').click()">📂 讀取設定</button>
@@ -372,7 +363,7 @@
     const defaultCleaningList = ["教室內掃地", "教室內拖地", "擦窗戶", "整理黑板", "整理電視電腦櫃", "一般垃圾", "回收垃圾", "洗手台", "陽台", "整理掃具", "走廊", "外掃區"];
     let cleaningTasks = defaultCleaningList.map(task => ({ name: task, count: 2, students: "" }));
 
-    // --- Batch Paste Feature (V14) ---
+    // --- Batch Paste Feature ---
     function toggleBatchPaste() {
         const area = document.getElementById('batchPasteArea');
         area.style.display = area.style.display === 'none' || area.style.display === '' ? 'block' : 'none';
@@ -382,21 +373,14 @@
         const text = document.getElementById('batchInput').value;
         const lines = text.split('\n');
         let count = 0;
-        
         lines.forEach(line => {
             line = line.trim();
             if(!line) return;
-            // Match "01 Name", "1. Name", "1,Name", "1 Name"
             const match = line.match(/^(\d+)[\s\t\.\,、]+(.+)$/);
-            
             if (match) {
-                let num = match[1];
-                let name = match[2].trim();
-                // 移除可能的 leading zeros for storage consistency if needed, but keeping as string is safer
-                studentMap[num] = name;
+                studentMap[match[1]] = match[2].trim();
                 count++;
             } else {
-                // No number found, treat as just name
                 if (!/^\d+$/.test(line)) {
                     let id = (manualCounter++).toString();
                     studentMap[id] = line;
@@ -404,7 +388,6 @@
                 }
             }
         });
-        
         document.getElementById('batchInput').value = '';
         toggleBatchPaste();
         refreshSidebars();
@@ -489,6 +472,7 @@
                 }
             }
 
+            // 碰撞檢測 - V13 修復：自由座也能正確碰撞
             let occupiedObj = null;
             c.getObjects().forEach(obj => {
                 if (obj === target) return;
@@ -505,10 +489,13 @@
             });
 
             if (occupiedObj) {
+                // 交換
                 animateMove(occupiedObj, target._startLeft, target._startTop, c);
                 occupiedObj._startLeft = target._startLeft;
                 occupiedObj._startTop = target._startTop;
+                
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
+                // 若是自由座，停在原地即可
                 target.setCoords();
             } else {
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
@@ -756,7 +743,13 @@
             } else {
                 let textObj = seat.getObjects()[1];
                 if (seat.isFreeSeat) { textObj.set('text', "自由座"); seat.studentId = ""; }
-                else { textObj.set('text', ""); seat.studentId = ""; }
+                else { 
+                    let seatId = seat.studentId; // 嘗試保留原始座號
+                    // 若原始座號丟失(因交換)，這裡會清空。
+                    // 若要嚴謹，需在建立 Grid 時綁定 originalId。目前簡化為清空
+                    textObj.set('text', ""); 
+                    seat.studentId = ""; 
+                }
             }
         });
         cvs.renderAll(); refreshSidebars();
@@ -950,20 +943,58 @@
         XLSX.utils.book_append_sheet(wb, ws, "名單"); XLSX.writeFile(wb, "範例.xlsx");
     }
     function exportToWord() {
+        // ... (Export Word Logic using docx.js, same as V14.1) ...
+        const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ImageRun } = docx;
+        
+        // Helper to convert dataURL to buffer
+        function dataURLtoBuffer(dataurl) {
+            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+            return u8arr;
+        }
+
+        // Hide grids temporarily
         [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 0); }); cvs.renderAll(); });
-        const imgMain = canvasMain.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' });
-        const imgGroup = canvasGroup.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' });
+        
+        const imgMain = dataURLtoBuffer(canvasMain.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' }));
+        const imgGroup = dataURLtoBuffer(canvasGroup.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' }));
+        
         [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 1); }); cvs.renderAll(); });
 
-        let cadreHtml = '<table border="1" style="border-collapse:collapse; width:100%; text-align:center;"><tr><th style="background:#FFE082">職稱</th><th style="background:#FFE082">負責學生</th></tr>';
-        cadreData.forEach(c => { cadreHtml += `<tr><td>${c.role}</td><td>${c.student}</td></tr>`; }); cadreHtml += '</table>';
-        let cleaningHtml = '<table border="1" style="border-collapse:collapse; width:100%; text-align:center;"><tr><th style="background:#FFE082">工作項目</th><th style="background:#FFE082">人數</th><th style="background:#FFE082">負責學生</th></tr>';
-        cleaningTasks.forEach(t => { cleaningHtml += `<tr><td>${t.name}</td><td>${t.count}</td><td>${t.students}</td></tr>`; }); cleaningHtml += '</table>';
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({ children: [new TextRun({ text: "班級座位表 (一般)", bold: true, size: 32 })] }),
+                    new Paragraph({ children: [new ImageRun({ data: imgMain, transformation: { width: 550, height: 400 } })] }),
+                    new Paragraph({ children: [new TextRun({ text: "分組座位表", bold: true, size: 32, break: 1 })] }),
+                    new Paragraph({ children: [new ImageRun({ data: imgGroup, transformation: { width: 550, height: 400 } })] }),
+                    
+                    new Paragraph({ children: [new TextRun({ text: "班級幹部名單", bold: true, size: 32, break: 1 })] }),
+                    new Table({
+                        rows: [
+                            new TableRow({ children: [ new TableCell({ children: [new Paragraph("職稱")], width: { size: 30, type: WidthType.PERCENTAGE } }), new TableCell({ children: [new Paragraph("負責學生")], width: { size: 70, type: WidthType.PERCENTAGE } }) ] }),
+                            ...cadreData.map(c => new TableRow({ children: [ new TableCell({ children: [new Paragraph(c.role)] }), new TableCell({ children: [new Paragraph(c.student)] }) ] }))
+                        ], width: { size: 100, type: WidthType.PERCENTAGE }
+                    }),
 
-        const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'></head><body style="font-family: 'Microsoft JhengHei', sans-serif;"><h2 style="color:#E65100">班級座位表 (一般)</h2><img src="${imgMain}" width="600"><br><br><h2 style="color:#E65100">分組座位表</h2><img src="${imgGroup}" width="600"><br><br><h2 style="color:#E65100">班級幹部名單</h2>${cadreHtml}<br><h2 style="color:#E65100">掃地工作分配</h2>${cleaningHtml}</body></html>`;
-        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '班級資料.doc'; a.click();
+                    new Paragraph({ children: [new TextRun({ text: "掃地工作分配", bold: true, size: 32, break: 1 })] }),
+                    new Table({
+                        rows: [
+                            new TableRow({ children: [ new TableCell({ children: [new Paragraph("工作項目")] }), new TableCell({ children: [new Paragraph("人數")] }), new TableCell({ children: [new Paragraph("負責學生")] }) ] }),
+                            ...cleaningTasks.map(t => new TableRow({ children: [ new TableCell({ children: [new Paragraph(t.name)] }), new TableCell({ children: [new Paragraph(t.count.toString())] }), new TableCell({ children: [new Paragraph(t.students)] }) ] }))
+                        ], width: { size: 100, type: WidthType.PERCENTAGE }
+                    })
+                ]
+            }]
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            saveAs(blob, "班級資料.docx");
+        });
     }
+    
     function exportToExcel() {
         const wb = XLSX.utils.book_new();
         let mainRows = [["--- 一般座位 ---"]];
