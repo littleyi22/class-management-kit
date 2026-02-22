@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級經營助手 V.14.1</title>
+    <title>班級經營助手 V.15.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -79,21 +79,26 @@
         .d-pad button { padding: 2px 0; font-size: 1.2rem; }
 
         .batch-paste-area { margin-top: 10px; display: none; background: #fff; padding: 10px; border: 1px dashed #039BE5; border-radius: 8px; }
+        
+        /* AutoSave Indicator */
+        .autosave-indicator { font-size: 0.8rem; color: #4CAF50; font-weight: bold; opacity: 0; transition: opacity 0.5s; margin-left: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid main-container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.14.1</small></h3>
-        <div class="d-flex gap-2">
+        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.15.0</small><span id="saveBadge" class="autosave-indicator">✓ 已自動儲存</span></h3>
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-sm btn-danger" onclick="resetAllData()">🗑️ 重置系統</button>
+            <div class="vr mx-2"></div>
             <button class="btn btn-sm btn-dark" onclick="downloadConfig()">💾 下載設定</button>
             <button class="btn btn-sm btn-warning" onclick="document.getElementById('configInput').click()">📂 讀取設定</button>
             <input type="file" id="configInput" accept=".json" style="display: none;" onchange="loadConfig(this)">
             <div class="vr mx-2"></div>
             <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="importStudentExcel(this)">
             <button class="btn btn-sm btn-purple" onclick="downloadExampleExcel()">📥 範例</button>
-            <button class="btn btn-sm btn-purple" onclick="document.getElementById('excelInput').click()">📤 匯入</button>
+            <button class="btn btn-sm btn-purple" onclick="document.getElementById('excelInput').click()">📤 匯入名單</button>
             <div class="vr mx-2"></div>
             <button class="btn btn-sm btn-outline-primary" onclick="exportToWord()">📝 Word</button>
             <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">📊 Excel</button>
@@ -148,7 +153,7 @@
                         <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('main')">✨ 自由座</button>
                         <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('main')">📦 可命名物體</button>
                         <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('main')">🗑️ 刪除選取</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('main')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('main')">♻️ 撤除學生</button>
                         <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('main')">🔄 視角切換</button>
                     </div>
                 </div>
@@ -225,7 +230,7 @@
                         <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('group')">✨ 自由座</button>
                         <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('group')">📦 可命名物體</button>
                         <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('group')">🗑️ 刪除選取</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('group')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('group')">♻️ 撤除學生</button>
                         <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('group')">🔄 視角切換</button>
                     </div>
                 </div>
@@ -345,25 +350,80 @@
         palette.appendChild(btn);
     });
 
-    function applyColorToSeat(color) {
-        const activeObj = canvasGroup.getActiveObject();
-        if (activeObj) {
-            if(activeObj.type === 'activeSelection') {
-                activeObj.forEachObject(obj => { if(obj.isStudent) obj.item(0).set('fill', color); });
-            } else if(activeObj.isStudent) {
-                activeObj.item(0).set('fill', color);
-            }
-            canvasGroup.renderAll(); saveState('groups');
-        }
-    }
-
     const defaultCadresList = ["班長", "副班長", "學藝股長", "風紀股長", "衛生股長", "總務股長", "康樂股長", "牛奶長", "榮譽長", "國語小老師", "英語小老師", "數學小老師", "自然小老師", "社會小老師"];
     let cadreData = defaultCadresList.map(role => ({ role: role, student: "" }));
 
     const defaultCleaningList = ["教室內掃地", "教室內拖地", "擦窗戶", "整理黑板", "整理電視電腦櫃", "一般垃圾", "回收垃圾", "洗手台", "陽台", "整理掃具", "走廊", "外掃區"];
     let cleaningTasks = defaultCleaningList.map(task => ({ name: task, count: 2, students: "" }));
 
-    // --- Batch Paste Feature ---
+    // --- LocalStorage 自動存取功能 (V15) ---
+    let autoSaveTimeout = null;
+
+    function triggerAutoSave() {
+        if(autoSaveTimeout) clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            const config = {
+                mainCanvas: canvasMain.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop']),
+                groupCanvas: canvasGroup.toJSON(['studentId', 'isStudent', 'isGridLine', 'isBlackboard', 'isTeacherDesk', 'isFreeSeat', '_startLeft', '_startTop']),
+                placedMain: Array.from(placedMain),
+                placedGroup: Array.from(placedGroup),
+                cadreData: cadreData,
+                cleaningTasks: cleaningTasks,
+                studentMap: studentMap,
+                mainConfig: mainConfig,
+                groupConfig: groupConfig
+            };
+            try {
+                localStorage.setItem('classManagerV15', JSON.stringify(config));
+                showAutoSaveBadge();
+            } catch(e) { console.error("AutoSave Failed:", e); }
+        }, 1000); // 延遲1秒儲存，避免頻繁寫入
+    }
+
+    function showAutoSaveBadge() {
+        const badge = document.getElementById('saveBadge');
+        badge.style.opacity = 1;
+        setTimeout(() => badge.style.opacity = 0, 2000);
+    }
+
+    function loadFromLocal() {
+        const saved = localStorage.getItem('classManagerV15');
+        if (saved) {
+            try {
+                const config = JSON.parse(saved);
+                studentMap = config.studentMap || {};
+                cadreData = config.cadreData || cadreData;
+                cleaningTasks = config.cleaningTasks || cleaningTasks;
+                placedMain = new Set(config.placedMain || []);
+                placedGroup = new Set(config.placedGroup || []);
+                mainConfig = config.mainConfig || mainConfig;
+                groupConfig = config.groupConfig || groupConfig;
+                
+                canvasMain.loadFromJSON(config.mainCanvas, () => { canvasMain.renderAll(); });
+                canvasGroup.loadFromJSON(config.groupCanvas, () => { canvasGroup.renderAll(); });
+
+                document.getElementById('inputRowsMain').value = mainConfig.rows; 
+                document.getElementById('inputColsMain').value = mainConfig.cols;
+                document.getElementById('inputRowsGroup').value = groupConfig.rows; 
+                document.getElementById('inputColsGroup').value = groupConfig.cols;
+                
+                return true;
+            } catch(e) {
+                console.error("Load Local Error", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    function resetAllData() {
+        if(confirm("⚠️ 確定要清除所有資料並恢復預設狀態嗎？這將無法復原！")) {
+            localStorage.removeItem('classManagerV15');
+            location.reload(); // 重新整理頁面以重置
+        }
+    }
+
+    // --- Batch Paste ---
     function toggleBatchPaste() {
         const area = document.getElementById('batchPasteArea');
         area.style.display = area.style.display === 'none' || area.style.display === '' ? 'block' : 'none';
@@ -391,6 +451,7 @@
         document.getElementById('batchInput').value = '';
         toggleBatchPaste();
         refreshSidebars();
+        triggerAutoSave();
         alert(`已成功匯入 ${count} 筆資料`);
     }
 
@@ -409,6 +470,7 @@
         oldLines.forEach(o => cvs.remove(o));
         drawGridLines(cvs, cfg);
         cvs.renderAll();
+        triggerAutoSave();
     }
 
     function switchTab(tabName) {
@@ -429,6 +491,8 @@
         else if (type === 'cleaning') state = JSON.stringify(cleaningTasks);
         historyStack[type].push(state);
         if(historyStack[type].length > MAX_HISTORY) historyStack[type].shift();
+        
+        triggerAutoSave(); // 在存 Undo 時也觸發 LocalStorage 存檔
     }
 
     function undo(type) {
@@ -436,18 +500,20 @@
         const state = JSON.parse(historyStack[type].pop());
         if(type === 'seats') {
             mainConfig = state.config || mainConfig;
-            canvasMain.loadFromJSON(state.canvas, () => { placedMain = new Set(state.placed); canvasMain.renderAll(); refreshSidebars(); });
+            canvasMain.loadFromJSON(state.canvas, () => { placedMain = new Set(state.placed); canvasMain.renderAll(); refreshSidebars(); triggerAutoSave(); });
         } else if (type === 'groups') {
             groupConfig = state.config || groupConfig;
-            canvasGroup.loadFromJSON(state.canvas, () => { placedGroup = new Set(state.placed); canvasGroup.renderAll(); refreshSidebars(); });
-        } else if(type === 'cadres') { cadreData = state; renderCadres(); }
-        else if(type === 'cleaning') { cleaningTasks = state; renderCleaningList(); }
+            canvasGroup.loadFromJSON(state.canvas, () => { placedGroup = new Set(state.placed); canvasGroup.renderAll(); refreshSidebars(); triggerAutoSave(); });
+        } else if(type === 'cadres') { cadreData = state; renderCadres(); triggerAutoSave(); }
+        else if(type === 'cleaning') { cleaningTasks = state; renderCleaningList(); triggerAutoSave(); }
     }
 
     [canvasMain, canvasGroup].forEach((c, idx) => {
         let type = idx === 0 ? 'seats' : 'groups';
+        // 不在這裡綁定 triggerAutoSave，因為 saveState 裡面已經綁定了
         c.on('object:modified', () => saveState(type));
         c.on('object:added', (e) => { if(!e.target.isGridLine) saveState(type); });
+        c.on('object:removed', () => triggerAutoSave()); // 確保刪除時也有存檔
         
         c.on('mouse:down', (opt) => {
             if(opt.target) {
@@ -472,7 +538,6 @@
                 }
             }
 
-            // 碰撞檢測 - V13 修復：自由座也能正確碰撞
             let occupiedObj = null;
             c.getObjects().forEach(obj => {
                 if (obj === target) return;
@@ -489,13 +554,10 @@
             });
 
             if (occupiedObj) {
-                // 交換
                 animateMove(occupiedObj, target._startLeft, target._startTop, c);
                 occupiedObj._startLeft = target._startLeft;
                 occupiedObj._startTop = target._startTop;
-                
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
-                // 若是自由座，停在原地即可
                 target.setCoords();
             } else {
                 if (isGridTarget) target.set({ left: closestSlot.x, top: closestSlot.y });
@@ -584,6 +646,7 @@
         }
         addBlackboard(mode); addTeacherDesk(mode);
         refreshSidebars();
+        triggerAutoSave();
     }
 
     function drawGridLines(cvs, cfg) {
@@ -613,13 +676,25 @@
         return group;
     }
 
+    function applyColorToSeat(color) {
+        const activeObj = canvasGroup.getActiveObject();
+        if (activeObj) {
+            if(activeObj.type === 'activeSelection') {
+                activeObj.forEachObject(obj => { if(obj.isStudent) obj.item(0).set('fill', color); });
+            } else if(activeObj.isStudent) {
+                activeObj.item(0).set('fill', color);
+            }
+            canvasGroup.renderAll(); saveState('groups'); triggerAutoSave();
+        }
+    }
+
     function addTeacherDesk(mode) { 
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         let objs = cvs.getObjects().filter(o => o.isTeacherDesk); objs.forEach(o => cvs.remove(o));
         const rect = new fabric.Rect({ width: 100, height: 50, fill: '#A1887F', stroke: '#5D4037', strokeWidth: 2, originX: 'center', originY: 'center' });
         const text = new fabric.Text("講桌", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' });
         const group = new fabric.Group([rect, text], { left: cvs.width/2, top: 520, selectable: true, originX: 'center', originY: 'center' }); 
-        group.isTeacherDesk = true; cvs.add(group); 
+        group.isTeacherDesk = true; cvs.add(group); triggerAutoSave();
     }
     function addBlackboard(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -627,7 +702,7 @@
         const rect = new fabric.Rect({ width: 500, height: 25, fill: '#2F4F2F', stroke: '#5D4037', strokeWidth: 3, rx:5, ry:5, originX: 'center', originY: 'center' });
         const text = new fabric.Text("黑板", { fontSize: 16, fill: '#fff', originX: 'center', originY: 'center' });
         const group = new fabric.Group([rect, text], { left: cvs.width/2, top: 580, selectable: true, originX: 'center', originY: 'center' });
-        group.isBlackboard = true; cvs.add(group);
+        group.isBlackboard = true; cvs.add(group); triggerAutoSave();
     }
     function addDoor(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -635,7 +710,7 @@
         const doorLeaf = new fabric.Rect({ width: 60, height: 40, fill: 'rgba(141, 110, 99, 0.3)', stroke: '#8D6E63', strokeDashArray:[5,5], strokeWidth: 1, top: 25, originX: 'center', originY: 'center' });
         const text = new fabric.Text("門", { fontSize: 14, fill: '#3E2723', top: -15, originX: 'center', originY: 'center' });
         const group = new fabric.Group([rect, doorLeaf, text], { left: 50, top: 50, selectable: true, originX: 'center', originY: 'center' });
-        cvs.add(group);
+        cvs.add(group); triggerAutoSave();
     }
     function addCustomObject(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -644,9 +719,9 @@
         const group = new fabric.Group([rect, text], { left: 100, top: 100, selectable: true, originX: 'center', originY: 'center' });
         group.on('mousedblclick', () => {
             let newName = prompt("請輸入新名稱:", text.text);
-            if(newName) { text.set('text', newName); cvs.renderAll(); }
+            if(newName) { text.set('text', newName); cvs.renderAll(); triggerAutoSave(); }
         });
-        cvs.add(group);
+        cvs.add(group); triggerAutoSave();
     }
     function addFreeSeat(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -656,7 +731,7 @@
         const text = new fabric.IText("自由座", { fontSize: 16, fill: '#E65100', fontFamily: 'Microsoft JhengHei', fontWeight: 'bold', originX: 'center', originY: 'center', textAlign: 'center' });
         const group = new fabric.Group([desk, text], { left: cvs.width/2, top: cvs.height/2, selectable: true, hasControls: true, originX: 'center', originY: 'center' });
         group.isStudent = true; group.isFreeSeat = true; group.studentId = "";
-        cvs.add(group);
+        cvs.add(group); triggerAutoSave();
     }
     function deleteSelected(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -666,7 +741,7 @@
         if(activeObj) {
             if(activeObj.type === 'activeSelection') activeObj.forEachObject(obj => { if(obj.studentId) placedSet.delete(obj.studentId); });
             else if(activeObj.studentId) placedSet.delete(activeObj.studentId);
-            cvs.remove(activeObj); cvs.discardActiveObject(); cvs.renderAll(); refreshSidebars();
+            cvs.remove(activeObj); cvs.discardActiveObject(); cvs.renderAll(); refreshSidebars(); triggerAutoSave();
         }
     }
     function clearAllSeats(mode) {
@@ -684,7 +759,7 @@
                 }
             }
         });
-        placedSet.clear(); cvs.renderAll(); refreshSidebars();
+        placedSet.clear(); cvs.renderAll(); refreshSidebars(); triggerAutoSave();
     }
     function rotateCanvas(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
@@ -694,6 +769,7 @@
             const newTop = 2 * cy - obj.top;
             obj.animate({ left: newLeft, top: newTop }, { duration: 500, onChange: cvs.renderAll.bind(cvs), easing: fabric.util.ease.easeInOutQuad });
         });
+        triggerAutoSave();
     }
 
     function autoSeatStudents(mode) {
@@ -701,7 +777,7 @@
         let placedSet = mode === 'main' ? placedMain : placedGroup;
         saveState(mode === 'main' ? 'seats' : 'groups');
         const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        const seats = cvs.getObjects().filter(o => o.isStudent); // Include Free Seats
+        const seats = cvs.getObjects().filter(o => o.isStudent); 
         seats.sort((a, b) => (a.top - b.top) || (a.left - b.left));
 
         let studentIdx = 0;
@@ -719,7 +795,7 @@
                 }
             }
         });
-        cvs.renderAll(); refreshSidebars();
+        cvs.renderAll(); refreshSidebars(); triggerAutoSave();
     }
 
     function randomizeSeats(mode) {
@@ -743,16 +819,10 @@
             } else {
                 let textObj = seat.getObjects()[1];
                 if (seat.isFreeSeat) { textObj.set('text', "自由座"); seat.studentId = ""; }
-                else { 
-                    let seatId = seat.studentId; // 嘗試保留原始座號
-                    // 若原始座號丟失(因交換)，這裡會清空。
-                    // 若要嚴謹，需在建立 Grid 時綁定 originalId。目前簡化為清空
-                    textObj.set('text', ""); 
-                    seat.studentId = ""; 
-                }
+                else { textObj.set('text', ""); seat.studentId = ""; }
             }
         });
-        cvs.renderAll(); refreshSidebars();
+        cvs.renderAll(); refreshSidebars(); triggerAutoSave();
     }
 
     function downloadConfig() {
@@ -764,19 +834,10 @@
             mainConfig: mainConfig, groupConfig: groupConfig
         };
         const blob = new Blob([JSON.stringify(config)], { type: 'application/json;charset=utf-8' });
-        
-        // 使用 FileSaver.js 的 saveAs 來處理下載，完美避開 Safari 的 Blob 阻擋問題
-        if (window.saveAs) {
-            window.saveAs(blob, '班級設定.json');
-        } else {
-            // 備用方案 (萬一套件沒載入成功)
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = '班級設定.json'; 
-            a.click();
-        }
+        if (window.saveAs) { window.saveAs(blob, '班級設定.json'); } 
+        else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '班級設定.json'; a.click(); }
     }
-	
+
     function loadConfig(input) {
         const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
@@ -793,6 +854,7 @@
             document.getElementById('inputRowsMain').value = mainConfig.rows; document.getElementById('inputColsMain').value = mainConfig.cols;
             document.getElementById('inputRowsGroup').value = groupConfig.rows; document.getElementById('inputColsGroup').value = groupConfig.cols;
             alert("讀取成功！");
+            triggerAutoSave();
         };
         reader.readAsText(file); input.value = '';
     }
@@ -852,7 +914,7 @@
                  }
              }
         }
-        cvs.renderAll(); refreshSidebars();
+        cvs.renderAll(); refreshSidebars(); triggerAutoSave();
     }
 
     function updateSeatText(groupObj, id) {
@@ -887,21 +949,22 @@
         if (activeInput.type === 'cadre') cadreData[activeInput.index].student = newValue;
         else if (activeInput.type === 'cleaning') cleaningTasks[activeInput.index].students = newValue;
         refreshSidebars();
+        triggerAutoSave();
     }
     function renderCadres() {
         const tbody = document.getElementById('cadreList'); tbody.innerHTML = "";
         cadreData.forEach((item, index) => {
-            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${item.role}" onchange="saveState('cadres'); cadreData[${index}].role = this.value"></td><td><input type="text" class="form-control target-input" value="${item.student}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cadre', ${index})" oninput="cadreData[${index}].student = this.value; refreshSidebars();" onchange="saveState('cadres');"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cadre', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cadres'); cadreData.splice(${index}, 1); renderCadres();">刪除整列</button></td></tr>`;
+            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${item.role}" onchange="saveState('cadres'); cadreData[${index}].role = this.value; triggerAutoSave();"></td><td><input type="text" class="form-control target-input" value="${item.student}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cadre', ${index})" oninput="cadreData[${index}].student = this.value; refreshSidebars(); triggerAutoSave();"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cadre', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cadres'); cadreData.splice(${index}, 1); renderCadres(); triggerAutoSave();">刪除整列</button></td></tr>`;
         });
     }
-    function addCadreRow() { saveState('cadres'); cadreData.push({ role: "", student: "" }); renderCadres(); }
+    function addCadreRow() { saveState('cadres'); cadreData.push({ role: "", student: "" }); renderCadres(); triggerAutoSave(); }
     function renderCleaningList() {
         const tbody = document.getElementById('cleaningList'); tbody.innerHTML = "";
         cleaningTasks.forEach((task, index) => {
-            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${task.name}" onchange="saveState('cleaning'); cleaningTasks[${index}].name = this.value"></td><td><input type="number" class="form-control" value="${task.count}" style="width:70px" onchange="saveState('cleaning'); cleaningTasks[${index}].count = this.value"></td><td><input type="text" class="form-control target-input" value="${task.students}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cleaning', ${index})" oninput="cleaningTasks[${index}].students = this.value; refreshSidebars();" onchange="saveState('cleaning');"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cleaning', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cleaning'); cleaningTasks.splice(${index}, 1); renderCleaningList();">刪除整列</button></td></tr>`;
+            tbody.innerHTML += `<tr><td><input type="text" class="form-control" value="${task.name}" onchange="saveState('cleaning'); cleaningTasks[${index}].name = this.value; triggerAutoSave();"></td><td><input type="number" class="form-control" value="${task.count}" style="width:70px" onchange="saveState('cleaning'); cleaningTasks[${index}].count = this.value; triggerAutoSave();"></td><td><input type="text" class="form-control target-input" value="${task.students}" placeholder="點擊輸入" onclick="setActiveInput(this, 'cleaning', ${index})" oninput="cleaningTasks[${index}].students = this.value; refreshSidebars(); triggerAutoSave();"></td><td><button class="btn btn-sm btn-outline-danger mb-1" onclick="removeLastPerson('cleaning', ${index})">👤 刪除1人</button> <button class="btn btn-sm btn-danger" onclick="saveState('cleaning'); cleaningTasks.splice(${index}, 1); renderCleaningList(); triggerAutoSave();">刪除整列</button></td></tr>`;
         });
     }
-    function addCleaningTask() { saveState('cleaning'); cleaningTasks.push({ name: "", count: 1, students: "" }); renderCleaningList(); }
+    function addCleaningTask() { saveState('cleaning'); cleaningTasks.push({ name: "", count: 1, students: "" }); renderCleaningList(); triggerAutoSave(); }
     function removeLastPerson(type, index) {
         saveState(type === 'cadre' ? 'cadres' : 'cleaning');
         let targetStr = type === 'cadre' ? cadreData[index].student : cleaningTasks[index].students;
@@ -909,7 +972,7 @@
         let arr = targetStr.split(',').map(s => s.trim()); arr.pop(); let newValue = arr.join(', ');
         if (type === 'cadre') { cadreData[index].student = newValue; renderCadres(); } 
         else { cleaningTasks[index].students = newValue; renderCleaningList(); }
-        refreshSidebars();
+        refreshSidebars(); triggerAutoSave();
     }
     function refreshPickerSidebar(containerId, context) {
         const container = document.getElementById(containerId); if(!container) return; container.innerHTML = "";
@@ -928,7 +991,7 @@
 
     function addManualStudent() {
         const input = document.getElementById('manualNameInput'); const name = input.value.trim(); if(!name) return;
-        const id = (manualCounter++).toString(); studentMap[id] = name; input.value = ''; refreshSidebars();
+        const id = (manualCounter++).toString(); studentMap[id] = name; input.value = ''; refreshSidebars(); triggerAutoSave();
     }
     function importStudentExcel(input) {
         const file = input.files[0]; if (!file) return;
@@ -944,6 +1007,7 @@
                 if(num && name) studentMap[num.toString()] = name;
             });
             initGridSystem('main'); initGridSystem('group'); 
+            triggerAutoSave();
             alert(`匯入完成！`);
         }; reader.readAsArrayBuffer(file); input.value = '';
     }
@@ -953,23 +1017,14 @@
         XLSX.utils.book_append_sheet(wb, ws, "名單"); XLSX.writeFile(wb, "範例.xlsx");
     }
     function exportToWord() {
-        // ... (Export Word Logic using docx.js, same as V14.1) ...
         const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ImageRun } = docx;
-        
-        // Helper to convert dataURL to buffer
         function dataURLtoBuffer(dataurl) {
-            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-            return u8arr;
+            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--){ u8arr[n] = bstr.charCodeAt(n); } return u8arr;
         }
-
-        // Hide grids temporarily
         [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 0); }); cvs.renderAll(); });
-        
         const imgMain = dataURLtoBuffer(canvasMain.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' }));
         const imgGroup = dataURLtoBuffer(canvasGroup.toDataURL({ format: 'jpeg', quality: 0.9, backgroundColor: '#FFFFFF' }));
-        
         [canvasMain, canvasGroup].forEach(cvs => { cvs.getObjects().forEach(o => { if(o.isGridLine) o.set('opacity', 1); }); cvs.renderAll(); });
 
         const doc = new Document({
@@ -980,7 +1035,6 @@
                     new Paragraph({ children: [new ImageRun({ data: imgMain, transformation: { width: 550, height: 400 } })] }),
                     new Paragraph({ children: [new TextRun({ text: "分組座位表", bold: true, size: 32, break: 1 })] }),
                     new Paragraph({ children: [new ImageRun({ data: imgGroup, transformation: { width: 550, height: 400 } })] }),
-                    
                     new Paragraph({ children: [new TextRun({ text: "班級幹部名單", bold: true, size: 32, break: 1 })] }),
                     new Table({
                         rows: [
@@ -988,7 +1042,6 @@
                             ...cadreData.map(c => new TableRow({ children: [ new TableCell({ children: [new Paragraph(c.role)] }), new TableCell({ children: [new Paragraph(c.student)] }) ] }))
                         ], width: { size: 100, type: WidthType.PERCENTAGE }
                     }),
-
                     new Paragraph({ children: [new TextRun({ text: "掃地工作分配", bold: true, size: 32, break: 1 })] }),
                     new Table({
                         rows: [
@@ -999,12 +1052,8 @@
                 ]
             }]
         });
-
-        Packer.toBlob(doc).then(blob => {
-            saveAs(blob, "班級資料.docx");
-        });
+        Packer.toBlob(doc).then(blob => { saveAs(blob, "班級資料.docx"); });
     }
-    
     function exportToExcel() {
         const wb = XLSX.utils.book_new();
         let mainRows = [["--- 一般座位 ---"]];
@@ -1020,10 +1069,14 @@
     function allowDrop(ev) { ev.preventDefault(); }
 
     window.onload = function() { 
-        initGridSystem('main'); 
-        initGridSystem('group'); 
-        renderCadres(); 
-        renderCleaningList(); 
+        if (!loadFromLocal()) {
+            initGridSystem('main'); 
+            initGridSystem('group'); 
+            renderCadres(); 
+            renderCleaningList(); 
+        } else {
+            console.log("已從 LocalStorage 載入資料");
+        }
         switchTab('seats'); 
     }
 </script>
