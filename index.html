@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級經營助手 V.15.0</title>
+    <title>班級經營助手 V.14.2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -79,8 +79,6 @@
         .d-pad button { padding: 2px 0; font-size: 1.2rem; }
 
         .batch-paste-area { margin-top: 10px; display: none; background: #fff; padding: 10px; border: 1px dashed #039BE5; border-radius: 8px; }
-        
-        /* AutoSave Indicator */
         .autosave-indicator { font-size: 0.8rem; color: #4CAF50; font-weight: bold; opacity: 0; transition: opacity 0.5s; margin-left: 10px; }
     </style>
 </head>
@@ -88,7 +86,7 @@
 
 <div class="container-fluid main-container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.15.0</small><span id="saveBadge" class="autosave-indicator">✓ 已自動儲存</span></h3>
+        <h3 class="m-0" style="color:#E65100;">🏫 班級經營助手 <small class="fs-6 text-muted">V.14.2</small><span id="saveBadge" class="autosave-indicator">✓ 已自動儲存</span></h3>
         <div class="d-flex gap-2 align-items-center">
             <button class="btn btn-sm btn-danger" onclick="resetAllData()">🗑️ 重置系統</button>
             <div class="vr mx-2"></div>
@@ -153,8 +151,8 @@
                         <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('main')">✨ 自由座</button>
                         <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('main')">📦 可命名物體</button>
                         <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('main')">🗑️ 刪除選取</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('main')">♻️ 撤除學生</button>
-                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('main')">🔄 視角切換</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('main')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('main')">🔄 視角切換 (90°)</button>
                     </div>
                 </div>
                 <div class="col-md-8 text-center">
@@ -230,8 +228,8 @@
                         <button class="btn btn-outline-primary btn-sm w-100 mt-1 fw-bold" style="border-style:dashed;" onclick="addFreeSeat('group')">✨ 自由座</button>
                         <button class="btn btn-info btn-sm w-100 text-white mt-1" onclick="addCustomObject('group')">📦 可命名物體</button>
                         <button class="btn btn-danger btn-sm w-100 mt-2" onclick="deleteSelected('group')">🗑️ 刪除選取</button>
-                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('group')">♻️ 撤除學生</button>
-                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('group')">🔄 視角切換</button>
+                        <button class="btn btn-outline-danger btn-sm w-100 mt-1" onclick="clearAllSeats('group')">♻️ 全部清空</button>
+                        <button class="btn btn-outline-dark btn-sm w-100 mt-1" onclick="rotateCanvas('group')">🔄 視角切換 (90°)</button>
                     </div>
                 </div>
                 <div class="col-md-8 text-center">
@@ -356,7 +354,7 @@
     const defaultCleaningList = ["教室內掃地", "教室內拖地", "擦窗戶", "整理黑板", "整理電視電腦櫃", "一般垃圾", "回收垃圾", "洗手台", "陽台", "整理掃具", "走廊", "外掃區"];
     let cleaningTasks = defaultCleaningList.map(task => ({ name: task, count: 2, students: "" }));
 
-    // --- LocalStorage 自動存取功能 (V15) ---
+    // --- LocalStorage AutoSave ---
     let autoSaveTimeout = null;
 
     function triggerAutoSave() {
@@ -376,8 +374,8 @@
             try {
                 localStorage.setItem('classManagerV15', JSON.stringify(config));
                 showAutoSaveBadge();
-            } catch(e) { console.error("AutoSave Failed:", e); }
-        }, 1000); // 延遲1秒儲存，避免頻繁寫入
+            } catch(e) {}
+        }, 1000);
     }
 
     function showAutoSaveBadge() {
@@ -399,8 +397,8 @@
                 mainConfig = config.mainConfig || mainConfig;
                 groupConfig = config.groupConfig || groupConfig;
                 
-                canvasMain.loadFromJSON(config.mainCanvas, () => { canvasMain.renderAll(); });
-                canvasGroup.loadFromJSON(config.groupCanvas, () => { canvasGroup.renderAll(); });
+                canvasMain.loadFromJSON(config.mainCanvas, () => canvasMain.renderAll());
+                canvasGroup.loadFromJSON(config.groupCanvas, () => canvasGroup.renderAll());
 
                 document.getElementById('inputRowsMain').value = mainConfig.rows; 
                 document.getElementById('inputColsMain').value = mainConfig.cols;
@@ -408,10 +406,7 @@
                 document.getElementById('inputColsGroup').value = groupConfig.cols;
                 
                 return true;
-            } catch(e) {
-                console.error("Load Local Error", e);
-                return false;
-            }
+            } catch(e) { return false; }
         }
         return false;
     }
@@ -419,7 +414,7 @@
     function resetAllData() {
         if(confirm("⚠️ 確定要清除所有資料並恢復預設狀態嗎？這將無法復原！")) {
             localStorage.removeItem('classManagerV15');
-            location.reload(); // 重新整理頁面以重置
+            location.reload(); 
         }
     }
 
@@ -461,15 +456,13 @@
         let cfg = mode === 'main' ? mainConfig : groupConfig;
         saveState(mode === 'main' ? 'seats' : 'groups');
         cfg.startX += dx; cfg.startY += dy;
+        
         cvs.getObjects().forEach(obj => {
             obj.left += dx; obj.top += dy;
             if (obj._startLeft !== undefined) { obj._startLeft += dx; obj._startTop += dy; }
             obj.setCoords();
         });
-        const oldLines = cvs.getObjects().filter(o => o.isGridLine);
-        oldLines.forEach(o => cvs.remove(o));
-        drawGridLines(cvs, cfg);
-        cvs.renderAll();
+        cvs.requestRenderAll();
         triggerAutoSave();
     }
 
@@ -491,8 +484,7 @@
         else if (type === 'cleaning') state = JSON.stringify(cleaningTasks);
         historyStack[type].push(state);
         if(historyStack[type].length > MAX_HISTORY) historyStack[type].shift();
-        
-        triggerAutoSave(); // 在存 Undo 時也觸發 LocalStorage 存檔
+        triggerAutoSave();
     }
 
     function undo(type) {
@@ -510,10 +502,9 @@
 
     [canvasMain, canvasGroup].forEach((c, idx) => {
         let type = idx === 0 ? 'seats' : 'groups';
-        // 不在這裡綁定 triggerAutoSave，因為 saveState 裡面已經綁定了
         c.on('object:modified', () => saveState(type));
         c.on('object:added', (e) => { if(!e.target.isGridLine) saveState(type); });
-        c.on('object:removed', () => triggerAutoSave()); // 確保刪除時也有存檔
+        c.on('object:removed', () => triggerAutoSave());
         
         c.on('mouse:down', (opt) => {
             if(opt.target) {
@@ -530,8 +521,9 @@
             let closestSlot = null;
             let isGridTarget = !target.isFreeSeat;
 
+            // 完全基於網格線物件 (isGridLine) 吸附，不再依賴 cfg 的數學計算，這樣旋轉後也能完美吸附
             if (isGridTarget) {
-                closestSlot = getClosestGridSlot(target.left, target.top, cfg);
+                closestSlot = getClosestGridSlot(target.left, target.top, c);
                 if (!closestSlot) {
                     animateMove(target, target._startLeft, target._startTop, c);
                     return;
@@ -545,7 +537,8 @@
 
                 let isCollision = false;
                 if (isGridTarget) {
-                    isCollision = isAtPosition(obj, closestSlot.x, closestSlot.y);
+                    let dist = Math.sqrt(Math.pow(obj.left - closestSlot.x, 2) + Math.pow(obj.top - closestSlot.y, 2));
+                    isCollision = dist < 30; 
                 } else {
                     let dist = Math.sqrt(Math.pow(obj.left - target.left, 2) + Math.pow(obj.top - target.top, 2));
                     isCollision = dist < 40; 
@@ -567,13 +560,23 @@
         });
     });
 
-    function isAtPosition(obj, x, y) { return Math.abs(obj.left - x) < 20 && Math.abs(obj.top - y) < 20; }
-    function getClosestGridSlot(x, y, cfg) {
-        let col = Math.round((x - cfg.startX) / cfg.gapX);
-        let row = Math.round((y - cfg.startY) / cfg.gapY);
-        if (col < 0 || col >= cfg.cols || row < 0 || row >= cfg.rows) return null;
-        return { x: cfg.startX + col * cfg.gapX, y: cfg.startY + row * cfg.gapY };
+    // 依賴 isGridLine 物件的位置進行吸附
+    function getClosestGridSlot(x, y, cvs) {
+        let closest = null;
+        let minDist = Infinity;
+        cvs.getObjects().forEach(obj => {
+            if (obj.isGridLine) {
+                let dist = Math.pow(obj.left - x, 2) + Math.pow(obj.top - y, 2);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = { x: obj.left, y: obj.top, angle: obj.angle || 0 };
+                }
+            }
+        });
+        if (minDist > 15000) return null; // 距離太遠則彈回
+        return closest;
     }
+
     function animateMove(obj, left, top, c) {
         obj.animate({ left: left, top: top }, { duration: 200, onChange: c.renderAll.bind(c), easing: fabric.util.ease.easeOutQuad });
     }
@@ -761,15 +764,42 @@
         });
         placedSet.clear(); cvs.renderAll(); refreshSidebars(); triggerAutoSave();
     }
+    
+    // --- 90 Degree Rotation ---
     function rotateCanvas(mode) {
         let cvs = mode === 'main' ? canvasMain : canvasGroup;
         const cx = cvs.width / 2, cy = cvs.height / 2;
+        
         cvs.getObjects().forEach(obj => {
-            const newLeft = 2 * cx - obj.left;
-            const newTop = 2 * cy - obj.top;
-            obj.animate({ left: newLeft, top: newTop }, { duration: 500, onChange: cvs.renderAll.bind(cvs), easing: fabric.util.ease.easeInOutQuad });
+            const dx = obj.left - cx;
+            const dy = obj.top - cy;
+            // Clockwise 90 degrees math
+            const newLeft = cx - dy; 
+            const newTop = cy + dx;  
+            const newAngle = (obj.angle || 0) + 90;
+            
+            obj.animate({ left: newLeft, top: newTop, angle: newAngle }, { 
+                duration: 500, 
+                onChange: function() {
+                    // Counter rotate inner texts
+                    if (obj.getObjects) {
+                        obj.getObjects().forEach(innerObj => {
+                            if (innerObj.type === 'text' || innerObj.type === 'i-text') {
+                                innerObj.set('angle', -obj.angle);
+                            }
+                        });
+                    }
+                    if (cvs.requestRenderAll) cvs.requestRenderAll();
+                }, 
+                easing: fabric.util.ease.easeInOutQuad,
+                onComplete: function() {
+                    obj._startLeft = obj.left;
+                    obj._startTop = obj.top;
+                    obj.setCoords();
+                }
+            });
         });
-        triggerAutoSave();
+        setTimeout(() => triggerAutoSave(), 600);
     }
 
     function autoSeatStudents(mode) {
@@ -777,7 +807,7 @@
         let placedSet = mode === 'main' ? placedMain : placedGroup;
         saveState(mode === 'main' ? 'seats' : 'groups');
         const keys = Object.keys(studentMap).sort((a,b) => parseInt(a) - parseInt(b));
-        const seats = cvs.getObjects().filter(o => o.isStudent); 
+        const seats = cvs.getObjects().filter(o => o.isStudent && !o.isFreeSeat);
         seats.sort((a, b) => (a.top - b.top) || (a.left - b.left));
 
         let studentIdx = 0;
@@ -901,7 +931,7 @@
             targetObj.studentId = studentId; updateSeatText(targetObj, studentId); placedSet.add(studentId);
         } else {
              let cfg = mode === 'main' ? mainConfig : groupConfig;
-             let slot = getClosestGridSlot(pointer.x, pointer.y, cfg);
+             let slot = getClosestGridSlot(pointer.x, pointer.y, cvs);
              if(slot) {
                  let occupied = null; 
                  cvs.getObjects().forEach(o => { if(o.isStudent && !o.isFreeSeat && isAtPosition(o, slot.x, slot.y)) occupied = o; });
@@ -910,6 +940,10 @@
                      occupied.studentId = studentId; updateSeatText(occupied, studentId); placedSet.add(studentId);
                  } else {
                      let desk = createStudentDesk(studentId, slot.x, slot.y, cfg.seatW, cfg.seatH, '#FFECB3');
+                     desk.set('angle', slot.angle || 0);
+                     desk.getObjects().forEach(innerObj => {
+                         if (innerObj.type === 'text' || innerObj.type === 'i-text') innerObj.set('angle', -(slot.angle || 0));
+                     });
                      updateSeatText(desk, studentId); placedSet.add(studentId); cvs.add(desk);
                  }
              }
@@ -922,7 +956,8 @@
         let name = studentMap[id] || "";
         let display = parseInt(id) >= 1000 ? name : (parseInt(id) < 10 ? `0${id}` : `${id}`);
         if(name && parseInt(id) < 1000) display += `\n${name}`;
-        textObj.set('text', display); groupObj.addWithUpdate();
+        textObj.set('text', display); 
+        groupObj.dirty = true; // Use dirty instead of addWithUpdate to prevent bounding box warp
     }
 
     function isStudentUsed(displayStr, context) {
