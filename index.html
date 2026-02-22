@@ -763,10 +763,20 @@
             cadreData: cadreData, cleaningTasks: cleaningTasks, studentMap: studentMap,
             mainConfig: mainConfig, groupConfig: groupConfig
         };
-        const blob = new Blob([JSON.stringify(config)], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '班級設定.json'; a.click();
+        const blob = new Blob([JSON.stringify(config)], { type: 'application/json;charset=utf-8' });
+        
+        // 使用 FileSaver.js 的 saveAs 來處理下載，完美避開 Safari 的 Blob 阻擋問題
+        if (window.saveAs) {
+            window.saveAs(blob, '班級設定.json');
+        } else {
+            // 備用方案 (萬一套件沒載入成功)
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = '班級設定.json'; 
+            a.click();
+        }
     }
-
+	
     function loadConfig(input) {
         const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
